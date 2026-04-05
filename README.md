@@ -27,22 +27,22 @@ A production-grade REST API built with **Laravel 11** for managing the full life
 
 ## Documentation Files
 
-كل الـ docs موجودة في `docs/` folder:
+All docs are located in the `docs/` folder:
 
-| File | يحتوي على |
+| File | Contents |
 |---|---|
-| `docs/api.md` | كل endpoint مستقل مع كل الـ request/response shapes لكل سيناريو (201, 200, 401, 403, 404, 409, 422) |
-| `docs/openapi.yaml` | OpenAPI 3.0 spec كاملة — استوردها في Swagger UI لتصفح الـ API بصرياً |
-| `docs/schema.md` | مرجع سريع لكل field في كل table مع النوع والـ nullable والوصف |
-| `docs/cron-jobs.md` | شرح الـ scheduled commands الثلاثة، ترتيبها الليلي، وطريقة إعداد الـ cron في production |
-| `docs/testing.md` | دليل اختبار الـ API بـ VS Code REST Client خطوة بخطوة |
+| `docs/api.md` | Full endpoint reference with all request/response shapes for every scenario (201, 200, 401, 403, 404, 409, 422) |
+| `docs/openapi.yaml` | Complete OpenAPI 3.0 spec — import into Swagger UI for interactive browsing |
+| `docs/schema.md` | Quick field-level reference for every table with type, nullable, and description |
+| `docs/cron-jobs.md` | Documentation for the three scheduled commands, their nightly order, and production cron setup |
+| `docs/testing.md` | Testing guide — Newman CLI (automated) and VS Code REST Client (manual) |
 
-**ملفات الـ tests:**
+**Test files:**
 
-| File | الأداة |
+| File | Tool |
 |---|---|
-| `tests/api-test.http` | VS Code REST Client — 60 test case |
-| `tests/postman-collection.json` | Postman collection — كل الـ endpoints مع أمثلة (مطلوب في الـ submission) |
+| `tests/api-test.http` | VS Code REST Client — 60 test cases |
+| `tests/postman-collection.json` | Postman collection — all endpoints with examples |
 
 ---
 
@@ -382,7 +382,7 @@ Base URL: `http://localhost:8000/api`
 | POST | `/auth/login` | None | Login and receive token |
 | POST | `/auth/logout` | Token | Revoke current token |
 
-Rate limit: 5 requests/minute on auth endpoints.
+Rate limit: 20 requests/minute on auth endpoints.
 
 ---
 
