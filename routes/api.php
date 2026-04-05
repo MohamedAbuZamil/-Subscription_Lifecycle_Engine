@@ -45,7 +45,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('subscriptions/{subscription}/activate',      [SubscriptionController::class, 'activate']);
     Route::post('subscriptions/{subscription}/expire',        [SubscriptionController::class, 'expire']);
 
-    Route::apiResource('subscription-transactions', SubscriptionTransactionController::class)->only(['index', 'store', 'show', 'update']);
+    Route::apiResource('subscription-transactions', SubscriptionTransactionController::class, [
+        'parameters' => ['subscription-transactions' => 'transaction'],
+    ])->only(['index', 'store', 'show', 'update']);
     Route::post('subscription-transactions/{transaction}/mark-paid',   [SubscriptionTransactionController::class, 'markPaid']);
     Route::post('subscription-transactions/{transaction}/mark-failed', [SubscriptionTransactionController::class, 'markFailed']);
     Route::post('subscription-transactions/{transaction}/refund',      [SubscriptionTransactionController::class, 'refund']);
