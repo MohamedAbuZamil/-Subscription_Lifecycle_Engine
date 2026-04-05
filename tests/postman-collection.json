@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Subscription Lifecycle Engine",
-    "description": "End-to-end ordered collection. Run via Newman or Postman Runner top-to-bottom. Tokens and IDs are saved automatically via test scripts.",
+    "description": "End-to-end ordered collection. Before running, reset the database with: php artisan test:reset\nThen run via Newman: newman run tests/postman-collection.json --env-var 'baseUrl=http://127.0.0.1:8000/api' --delay-request 300 --verbose",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -47,17 +47,6 @@
             "url": {"raw":"{{baseUrl}}/auth/register","host":["{{baseUrl}}"],"path":["auth","register"]},
             "body": {"mode":"raw","raw":"{\n  \"name\": \"Ahmed Ali\",\n  \"email\": \"ahmed@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\"\n}"}
           }
-        },
-        {
-          "name": "Login user (fallback if already registered)",
-          "event": [{"listen":"test","script":{"exec":["try{var j=pm.response.json();if(j.token)pm.collectionVariables.set('userToken',j.token);}catch(e){}"]}},
-          {"listen":"prerequest","script":{"exec":["if(pm.collectionVariables.get('userToken'))pm.execution.skipRequest();"]}}],
-          "request": {
-            "method": "POST",
-            "header": [{"key":"Content-Type","value":"application/json"}],
-            "url": {"raw":"{{baseUrl}}/auth/login","host":["{{baseUrl}}"],"path":["auth","login"]},
-            "body": {"mode":"raw","raw":"{\n  \"email\": \"ahmed@example.com\",\n  \"password\": \"password123\"\n}"}
-          }
         }
       ]
     },
@@ -66,7 +55,7 @@
       "item": [
         {
           "name": "Create plan → planId saved",
-          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id){pm.collectionVariables.set('planId',j.data.id+'');}else{pm.sendRequest({url:pm.collectionVariables.get('baseUrl')+'/plans',method:'GET',header:[{key:'Authorization',value:'Bearer '+pm.collectionVariables.get('adminToken')},{key:'Accept',value:'application/json'}]},function(err,res){var d=res.json();if(d.data){var p=d.data.find(function(x){return x.code==='basic';});if(p)pm.collectionVariables.set('planId',p.id+'');}});}"]}}],
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('planId',j.data.id+'');"]}}],
           "request": {
             "method": "POST",
             "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
@@ -115,7 +104,7 @@
       "item": [
         {
           "name": "Create USD monthly price → usdPriceId saved",
-          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id){pm.collectionVariables.set('usdPriceId',j.data.id+'');}else{pm.sendRequest({url:pm.collectionVariables.get('baseUrl')+'/plan-prices',method:'GET',header:[{key:'Authorization',value:'Bearer '+pm.collectionVariables.get('adminToken')},{key:'Accept',value:'application/json'}]},function(err,res){var d=res.json();if(d.data){var p=d.data.find(function(x){return x.currency==='USD'&&x.billing_cycle==='monthly';});if(p)pm.collectionVariables.set('usdPriceId',p.id+'');}});}"]}}],
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('usdPriceId',j.data.id+'');"]}}],
           "request": {
             "method": "POST",
             "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
@@ -125,7 +114,7 @@
         },
         {
           "name": "Create AED monthly price → aedPriceId saved",
-          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id){pm.collectionVariables.set('aedPriceId',j.data.id+'');}else{pm.sendRequest({url:pm.collectionVariables.get('baseUrl')+'/plan-prices',method:'GET',header:[{key:'Authorization',value:'Bearer '+pm.collectionVariables.get('adminToken')},{key:'Accept',value:'application/json'}]},function(err,res){var d=res.json();if(d.data){var p=d.data.find(function(x){return x.currency==='AED'&&x.billing_cycle==='monthly';});if(p)pm.collectionVariables.set('aedPriceId',p.id+'');}});}"]}}],
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('aedPriceId',j.data.id+'');"]}}],
           "request": {
             "method": "POST",
             "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
@@ -183,7 +172,7 @@
       "item": [
         {
           "name": "Create subscription — user USD (trialing) → subscriptionId saved",
-          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id){pm.collectionVariables.set('subscriptionId',j.data.id+'');}else{pm.sendRequest({url:pm.collectionVariables.get('baseUrl')+'/subscriptions',method:'GET',header:[{key:'Authorization',value:'Bearer '+pm.collectionVariables.get('adminToken')},{key:'Accept',value:'application/json'}]},function(err,res){var d=res.json();if(d.data&&d.data.length>0){pm.collectionVariables.set('subscriptionId',d.data[0].id+'');}});}"]}}],
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('subscriptionId',j.data.id+'');"]}}],
           "request": {
             "method": "POST",
             "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{userToken}}"}],
@@ -222,7 +211,7 @@
       "item": [
         {
           "name": "Create transaction → transactionId saved",
-          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id){pm.collectionVariables.set('transactionId',j.data.id+'');}else{pm.sendRequest({url:pm.collectionVariables.get('baseUrl')+'/subscription-transactions',method:'GET',header:[{key:'Authorization',value:'Bearer '+pm.collectionVariables.get('adminToken')},{key:'Accept',value:'application/json'}]},function(err,res){var d=res.json();if(d.data&&d.data.length>0){pm.collectionVariables.set('transactionId',d.data[0].id+'');}});}"]}}],
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('transactionId',j.data.id+'');"]}}],
           "request": {
             "method": "POST",
             "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
@@ -373,32 +362,8 @@
       ]
     },
     {
-      "name": "07 — Cleanup (delete prices then plan, logout last)",
+      "name": "07 — Logout",
       "item": [
-        {
-          "name": "Delete USD price (admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
-            "url": {"raw":"{{baseUrl}}/plan-prices/{{usdPriceId}}","host":["{{baseUrl}}"],"path":["plan-prices","{{usdPriceId}}"]}
-          }
-        },
-        {
-          "name": "Delete AED price (admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
-            "url": {"raw":"{{baseUrl}}/plan-prices/{{aedPriceId}}","host":["{{baseUrl}}"],"path":["plan-prices","{{aedPriceId}}"]}
-          }
-        },
-        {
-          "name": "Delete plan (admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
-            "url": {"raw":"{{baseUrl}}/plans/{{planId}}","host":["{{baseUrl}}"],"path":["plans","{{planId}}"]}
-          }
-        },
         {
           "name": "Logout (user)",
           "request": {
