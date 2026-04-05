@@ -92,8 +92,6 @@ Server runs at: `http://localhost:8000/api`
 
 ---
 
-## VS Code REST Client
-
 ### Setup
 
 1. Install the **REST Client** extension by Humao in VS Code
@@ -134,11 +132,11 @@ Response appears in a split panel on the right.
 
 ## Recommended Test Order
 
-شغّل الـ tests بالترتيب ده عشان كل request يعتمد على اللي قبله:
+Run requests in this order — each one depends on the previous:
 
 ```
 [1]  Register user
-[3]  Login admin         ← كوبي adminToken
+[3]  Login admin         ← copy adminToken
 [14] Create plan
 [21] Create price USD
 [22] Create price AED
@@ -152,22 +150,22 @@ Response appears in a split panel on the right.
 
 ## Simulating UAE Currency (AED)
 
-لو عايز تتأكد إن الـ AED price بتتاخد للـ UAE users، أضف الـ header ده في request الـ subscription:
+To verify that AED pricing is selected for UAE users, add this header to the subscription request:
 
 ```http
 X-Forwarded-For: 94.200.1.1
 ```
 
-الـ IP ده بيبقى في نطاق الإمارات → الـ controller يشوفه ويختار AED تلقائياً.
+This IP falls within the UAE range — the controller detects it and automatically selects AED.
 
 ---
 
 ## Common Issues
 
-| المشكلة | السبب | الحل |
+| Problem | Cause | Fix |
 |---|---|---|
-| `401 Unauthenticated` | الـ token غلط أو فاضي | Login تاني وحدّث الـ token |
-| `403 Forbidden` | بتستخدم userToken في admin endpoint | استخدم `adminToken` |
-| `409 Conflict` | الـ subscription موجودة قبل كده | Cancel أو Expire الأول |
-| `422` على create transaction | الـ subscription مش في pending/trialing/past_due | تأكد من status الـ subscription |
-| Server مش بيرد | الـ server واقف | شغّل `PHP_CLI_SERVER_WORKERS=4 php artisan serve` |
+| `401 Unauthenticated` | Token is wrong or empty | Login again and update the token |
+| `403 Forbidden` | Using userToken on an admin endpoint | Use `adminToken` instead |
+| `409 Conflict` | Subscription already exists | Cancel or Expire it first |
+| `422` on create transaction | Subscription is not in pending/trialing/past_due | Check the subscription status |
+| Server not responding | Server is stopped | Run `PHP_CLI_SERVER_WORKERS=4 php artisan serve` |
