@@ -146,7 +146,7 @@ trialing
 | Server | OVH Ubuntu (cloud instance) |
 | API URL | `http://127.0.0.1:8000/api` |
 | PHP | 8.3 |
-| Framework | Laravel 11 |
+| Framework | Laravel 13 |
 | Auth | Laravel Sanctum (token-based) |
 | Newman version | CLI (latest) |
 | Request delay | 300ms between requests |

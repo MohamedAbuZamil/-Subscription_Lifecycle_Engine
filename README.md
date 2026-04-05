@@ -1,6 +1,6 @@
 # Subscription Lifecycle Engine
 
-A production-grade REST API built with **Laravel 11** for managing the full lifecycle of subscription plans — from creation and pricing through trial periods, payments, renewals, and expiry.
+A production-grade REST API built with **Laravel 13** for managing the full lifecycle of subscription plans — from creation and pricing through trial periods, payments, renewals, and expiry.
 
 **Repository:** [github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine](https://github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine)  
 **Contact:** abozamil4204251@gmail.com
@@ -68,7 +68,7 @@ All docs are located in the `docs/` folder:
 
 | Layer | Technology |
 |---|---|
-| Framework | Laravel 11 |
+| Framework | Laravel 13 |
 | Auth | Laravel Sanctum |
 | Database | MySQL 8.0 (via Docker) |
 | PHP | 8.3+ |
