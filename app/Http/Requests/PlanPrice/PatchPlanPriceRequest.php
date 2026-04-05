@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Http\Requests\PlanPrice;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class PatchPlanPriceRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'price'             => ['sometimes', 'numeric', 'gt:0'],
+            'grace_period_days' => ['sometimes', 'integer', 'min:0'],
+            'is_active'         => ['sometimes', 'boolean'],
+            'external_price_id' => ['sometimes', 'nullable', 'string'],
+        ];
+    }
+}

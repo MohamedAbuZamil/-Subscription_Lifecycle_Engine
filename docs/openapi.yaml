@@ -1,0 +1,2276 @@
+openapi: 3.0.3
+
+info:
+  title: Subscription Lifecycle Engine API
+  version: 1.0.0
+  description: |
+    A production-grade REST API for managing subscription plans, pricing, lifecycle states, and payment transactions.
+
+    ## Business Rules
+    - A plan can have multiple prices differentiated by billing cycle and currency.
+    - Each `plan_price` is unique by the combination of `(plan_id, billing_cycle, currency)`.
+    - Trial days are defined at the plan level; grace period days at the plan_price level.
+    - Subscription status transitions follow the payment lifecycle:
+      - **pending** → awaiting first payment confirmation
+      - **trialing** → user is within a free trial window
+      - **active** → paid and access is ongoing
+      - **past_due** → payment failed, grace period is running
+      - **canceled** → voluntarily canceled before full expiry
+        - **expired** → manually expired by admin (distinct from grace-period cancellation)
+    - Transactions record every payment attempt and its outcome.
+    - The `reference` field on a transaction must be globally unique.
+    - The `metadata` field may carry raw gateway or provider response payloads.
+  contact:
+    name: API Support
+    email: abozamil4204251@gmail.com
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.example.com/v1
+    description: Productio
+  - url: http://localhost:8000/v1
+    description: Local Development
+
+tags:
+  - name: plans
+    description: Manage subscription plans and their metadata.
+  - name: plan prices
+    description: Manage pricing entries per plan, billing cycle, and currency.
+  - name: subscriptions
+    description: Manage the full subscription lifecycle from creation through expiry.
+  - name: subscription transactions
+    description: Manage payment transactions linked to subscriptions.
+
+paths:
+
+  /plans:
+    get:
+      tags: [plans]
+      summary: List all plans
+      description: Returns a paginated list of subscription plans. Optionally filter by active status.
+      operationId: listPlans
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: is_active
+          in: query
+          description: Filter plans by their active status.
+          schema:
+            type: boolean
+            example: true
+      responses:
+        '200':
+          description: A paginated list of plans.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlansResponse'
+              example:
+                data:
+                  - id: 1
+                    code: basic
+                    name: Basic Plan
+                    description: A simple plan for new users.
+                    trial_days: 14
+                    is_active: true
+                    created_at: "2026-03-01T00:00:00Z"
+                    updated_at: "2026-03-01T00:00:00Z"
+                  - id: 2
+                    code: pro
+                    name: Pro Plan
+                    description: A plan with all features included.
+                    trial_days: 7
+                    is_active: true
+                    created_at: "2026-03-01T00:00:00Z"
+                    updated_at: "2026-03-01T00:00:00Z"
+                meta:
+                  current_page: 1
+                  per_page: 15
+                  total: 2
+                  last_page: 1
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [plans]
+      summary: Create a new plan
+      description: Creates a new subscription plan. The `code` must be globally unique.
+      operationId: createPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanCreateRequest'
+            example:
+              code: enterprise
+              name: Enterprise Plan
+              description: Best plan for large teams.
+              trial_days: 30
+              is_active: true
+      responses:
+        '201':
+          description: Plan created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Plan'
+              example:
+                data:
+                  id: 3
+                  code: enterprise
+                  name: Enterprise Plan
+                  description: Best plan for large teams.
+                  trial_days: 30
+                  is_active: true
+                  created_at: "2026-03-07T12:00:00Z"
+                  updated_at: "2026-03-07T12:00:00Z"
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /plans/{plan_id}:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+
+    get:
+      tags: [plans]
+      summary: Get a plan by ID
+      description: Returns a single plan resource by its ID.
+      operationId: getPlan
+      responses:
+        '200':
+          description: Plan found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Plan'
+              example:
+                data:
+                  id: 1
+                  code: basic
+                  name: Basic Plan
+                  description: A simple plan for new users.
+                  trial_days: 7
+                  is_active: true
+                  created_at: "2026-03-01T00:00:00Z"
+                  updated_at: "2026-03-01T00:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [plans]
+      summary: Replace a plan
+      description: Fully replaces a plan resource. All writable fields are required.
+      operationId: replacePlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanUpdateRequest'
+            example:
+              code: basic
+              name: Basic Plan (Updated)
+              description: Updated entry-level plan with expanded feature set.
+              trial_days: 0
+              is_active: true
+      responses:
+        '200':
+          description: Plan replaced successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Plan'
+              example:
+                data:
+                  id: 1
+                  code: basic
+                  name: Basic Plan (Updated)
+                  description: Updated basic plan with more features.
+                  trial_days: 0
+                  is_active: true
+                  created_at: "2026-03-01T00:00:00Z"
+                  updated_at: "2026-03-14T08:30:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [plans]
+      summary: Partially update a plan
+      description: Applies a partial update to a plan. Only provided fields are modified.
+      operationId: updatePlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanPatchRequest'
+            example:
+              is_active: false
+      responses:
+        '200':
+          description: Plan updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Plan'
+              example:
+                data:
+                  id: 1
+                  code: basic
+                  name: Basic Plan
+                  description: A simple plan for new users.
+                  trial_days: 7
+                  is_active: false
+                  created_at: "2026-03-01T00:00:00Z"
+                  updated_at: "2026-03-14T09:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [plans]
+      summary: Delete a plan
+      description: Deletes a plan by ID. Plans referenced by active subscriptions must not be deleted.
+      operationId: deletePlan
+      responses:
+        '204':
+          description: Plan deleted successfully. No content returned.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /plan-prices:
+    get:
+      tags: [plan prices]
+      summary: List plan prices
+      description: Returns a paginated list of plan prices. Filterable by plan, billing cycle, currency, and status.
+      operationId: listPlanPrices
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: plan_id
+          in: query
+          description: Filter by plan ID.
+          schema:
+            type: integer
+            example: 1
+        - name: billing_cycle
+          in: query
+          description: Filter by billing cycle.
+          schema:
+            type: string
+            enum: [monthly, yearly]
+            example: monthly
+        - name: currency
+          in: query
+          description: Filter by ISO 4217 currency code.
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 3
+            example: USD
+        - name: is_active
+          in: query
+          description: Filter by active status.
+          schema:
+            type: boolean
+            example: true
+      responses:
+        '200':
+          description: A paginated list of plan prices.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlanPricesResponse'
+              example:
+                data:
+                  - id: 1
+                    plan_id: 1
+                    billing_cycle: monthly
+                    currency: USD
+                    price: 9.99
+                    grace_period_days: 3
+                    is_active: true
+                    external_price_id: null
+                    created_at: "2026-03-01T00:00:00Z"
+                    updated_at: "2026-03-01T00:00:00Z"
+                  - id: 2
+                    plan_id: 1
+                    billing_cycle: yearly
+                    currency: USD
+                    price: 99.99
+                    grace_period_days: 3
+                    is_active: true
+                    external_price_id: price_stripe_001
+                    created_at: "2026-03-01T00:00:00Z"
+                    updated_at: "2026-03-01T00:00:00Z"
+                meta:
+                  current_page: 1
+                  per_page: 15
+                  total: 2
+                  last_page: 1
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [plan prices]
+      summary: Create a plan price
+      description: |
+        Creates a new price entry for a plan.
+        The combination of `(plan_id, billing_cycle, currency)` must be unique per plan.
+        The `grace_period_days` field controls how many days after a failed payment the subscription remains in `past_due` before expiring.
+      operationId: createPlanPrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanPriceCreateRequest'
+            example:
+              plan_id: 1
+              billing_cycle: monthly
+              currency: AED
+              price: 36.99
+              grace_period_days: 5
+              is_active: true
+              external_price_id: null
+      responses:
+        '201':
+          description: Plan price created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlanPrice'
+              example:
+                data:
+                  id: 5
+                  plan_id: 1
+                  billing_cycle: monthly
+                  currency: AED
+                  price: 36.99
+                  grace_period_days: 5
+                  is_active: true
+                  external_price_id: null
+                  created_at: "2026-03-07T12:00:00Z"
+                  updated_at: "2026-03-07T12:00:00Z"
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /plan-prices/{plan_price_id}:
+    parameters:
+      - $ref: '#/components/parameters/PlanPriceIdParam'
+
+    get:
+      tags: [plan prices]
+      summary: Get a plan price by ID
+      description: Returns a single plan price resource by its ID.
+      operationId: getPlanPrice
+      responses:
+        '200':
+          description: Plan price found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlanPrice'
+              example:
+                data:
+                  id: 1
+                  plan_id: 1
+                  billing_cycle: monthly
+                  currency: USD
+                  price: 9.99
+                  grace_period_days: 3
+                  is_active: true
+                  external_price_id: null
+                  created_at: "2026-03-01T00:00:00Z"
+                  updated_at: "2026-03-01T00:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [plan prices]
+      summary: Replace a plan price
+      description: Fully replaces a plan price. All writable fields are required.
+      operationId: replacePlanPrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanPriceUpdateRequest'
+            example:
+              plan_id: 1
+              billing_cycle: monthly
+              currency: USD
+              price: 12.99
+              grace_period_days: 5
+              is_active: true
+              external_price_id: price_stripe_xyz
+      responses:
+        '200':
+          description: Plan price replaced successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlanPrice'
+              example:
+                data:
+                  id: 1
+                  plan_id: 1
+                  billing_cycle: monthly
+                  currency: USD
+                  price: 12.99
+                  grace_period_days: 5
+                  is_active: true
+                  external_price_id: price_stripe_xyz
+                  created_at: "2026-03-01T00:00:00Z"
+                  updated_at: "2026-03-14T10:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [plan prices]
+      summary: Partially update a plan price
+      description: Applies a partial update to a plan price. Only provided fields are modified.
+      operationId: updatePlanPrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanPricePatchRequest'
+            example:
+              price: 11.49
+              grace_period_days: 7
+      responses:
+        '200':
+          description: Plan price updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlanPrice'
+              example:
+                data:
+                  id: 1
+                  plan_id: 1
+                  billing_cycle: monthly
+                  currency: USD
+                  price: 11.49
+                  grace_period_days: 7
+                  is_active: true
+                  external_price_id: null
+                  created_at: "2026-03-01T00:00:00Z"
+                  updated_at: "2026-03-14T11:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [plan prices]
+      summary: Delete a plan price
+      description: Deletes a plan price by ID. Fails if active subscriptions reference this price.
+      operationId: deletePlanPrice
+      responses:
+        '204':
+          description: Plan price deleted successfully. No content returned.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  
+  /subscriptions:
+    get:
+      tags: [subscriptions]
+      summary: List subscriptions
+      description: Returns a paginated list of subscriptions. Filterable by user, plan, and status.
+      operationId: listSubscriptions
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: user_id
+          in: query
+          description: Filter by the subscribing user ID.
+          schema:
+            type: integer
+            example: 42
+        - name: plan_id
+          in: query
+          description: Filter by plan ID.
+          schema:
+            type: integer
+            example: 1
+        - name: status
+          in: query
+          description: Filter by subscription lifecycle status.
+          schema:
+            type: string
+            enum: [pending, trialing, active, past_due, canceled, expired]
+            example: active
+      responses:
+        '200':
+          description: A paginated list of subscriptions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubscriptionsResponse'
+              example:
+                data:
+                  - id: 10
+                    user_id: 42
+                    plan_id: 1
+                    plan_price_id: 2
+                    status: active
+                    started_at: "2026-03-03T00:00:00Z"
+                    trial_starts_at: null
+                    trial_ends_at: null
+                    current_period_starts_at: "2026-03-07T00:00:00Z"
+                    current_period_ends_at: "2026-03-19T00:00:00Z"
+                    grace_period_ends_at: null
+                    canceled_at: null
+                    expires_at: null
+                    created_at: "2026-03-03T00:00:00Z"
+                    updated_at: "2026-03-07T00:00:00Z"
+                meta:
+                  current_page: 1
+                  per_page: 15
+                  total: 1
+                  last_page: 1
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [subscriptions]
+      summary: Create a subscription
+      description: |
+        Creates a new subscription for a user against a specific plan and price.
+
+        **Status determination on creation:**
+        - If `trial_starts_at` and `trial_ends_at` are provided the initial status is set to **trialing**.
+        - Otherwise the initial status is **pending** until the first payment is confirmed.
+      operationId: createSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+            example:
+              user_id: 42
+              plan_id: 1
+              plan_price_id: 2
+              started_at: "2026-03-07T00:00:00Z"
+              trial_starts_at: "2026-03-07T00:00:00Z"
+              trial_ends_at: "2026-03-14T00:00:00Z"
+      responses:
+        '201':
+          description: Subscription created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+              example:
+                data:
+                  id: 11
+                  user_id: 42
+                  plan_id: 1
+                  plan_price_id: 2
+                  status: trialing
+                  started_at: "2026-03-07T00:00:00Z"
+                  trial_starts_at: "2026-03-07T00:00:00Z"
+                  trial_ends_at: "2026-03-14T00:00:00Z"
+                  current_period_starts_at: null
+                  current_period_ends_at: null
+                  grace_period_ends_at: null
+                  canceled_at: null
+                  expires_at: null
+                  created_at: "2026-03-07T00:00:00Z"
+                  updated_at: "2026-03-07T00:00:00Z"
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscriptions/{subscription_id}:
+    parameters:
+      - $ref: '#/components/parameters/SubscriptionIdParam'
+
+    get:
+      tags: [subscriptions]
+      summary: Get a subscription by ID
+      description: Returns a single subscription resource by its ID.
+      operationId: getSubscription
+      responses:
+        '200':
+          description: Subscription found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+              example:
+                data:
+                  id: 10
+                  user_id: 42
+                  plan_id: 1
+                  plan_price_id: 2
+                  status: active
+                  started_at: "2026-03-03T00:00:00Z"
+                  trial_starts_at: null
+                  trial_ends_at: null
+                  current_period_starts_at: "2026-03-07T00:00:00Z"
+                  current_period_ends_at: "2026-03-19T00:00:00Z"
+                  grace_period_ends_at: null
+                  canceled_at: null
+                  expires_at: null
+                  created_at: "2026-03-03T00:00:00Z"
+                  updated_at: "2026-03-07T00:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [subscriptions]
+      summary: Partially update a subscription
+      description: |
+        Updates mutable date fields on a subscription such as period boundaries.
+        Status transitions must use the dedicated action endpoints to enforce business rule validation.
+      operationId: updateSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionUpdateRequest'
+            example:
+              current_period_starts_at: "2026-03-19T00:00:00Z"
+              current_period_ends_at: "2026-03-31T00:00:00Z"
+      responses:
+        '200':
+          description: Subscription updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+              example:
+                data:
+                  id: 10
+                  user_id: 42
+                  plan_id: 1
+                  plan_price_id: 2
+                  status: active
+                  started_at: "2026-03-03T00:00:00Z"
+                  trial_starts_at: null
+                  trial_ends_at: null
+                  current_period_starts_at: "2026-03-19T00:00:00Z"
+                  current_period_ends_at: "2026-03-31T00:00:00Z"
+                  grace_period_ends_at: null
+                  canceled_at: null
+                  expires_at: null
+                  created_at: "2026-03-03T00:00:00Z"
+                  updated_at: "2026-03-14T12:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscriptions/{subscription_id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/SubscriptionIdParam'
+
+    post:
+      tags: [subscriptions]
+      summary: Cancel a subscription
+      description: |
+        Transitions the subscription to **canceled** status and sets `canceled_at` to the current timestamp.
+        Valid from statuses: `active`, `trialing`, `past_due`.
+      operationId: cancelSubscription
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Optional cancellation reason for audit logging.
+                  example: User wants to cancel their subscription.
+            example:
+              reason: User wants to cancel their subscription.
+      responses:
+        '200':
+          description: Subscription canceled successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+              example:
+                data:
+                  id: 10
+                  user_id: 42
+                  plan_id: 1
+                  plan_price_id: 2
+                  status: canceled
+                  started_at: "2026-03-03T00:00:00Z"
+                  trial_starts_at: null
+                  trial_ends_at: null
+                  current_period_starts_at: "2026-03-07T00:00:00Z"
+                  current_period_ends_at: "2026-03-19T00:00:00Z"
+                  grace_period_ends_at: null
+                  canceled_at: "2026-03-14T14:00:00Z"
+                  expires_at: null
+                  created_at: "2026-03-03T00:00:00Z"
+                  updated_at: "2026-03-14T14:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscriptions/{subscription_id}/renew:
+    parameters:
+      - $ref: '#/components/parameters/SubscriptionIdParam'
+
+    post:
+      tags: [subscriptions]
+      summary: Renew a subscription
+      description: |
+        Advances the subscription into the next billing period by updating `current_period_starts_at` and `current_period_ends_at`.
+        Status remains **active**. Typically triggered automatically after a successful payment transaction.
+        Valid from status: `active`.
+      operationId: renewSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_period_starts_at
+                - current_period_ends_at
+              properties:
+                current_period_starts_at:
+                  type: string
+                  format: date-time
+                  description: Start of the new billing period.
+                  example: "2026-03-19T00:00:00Z"
+                current_period_ends_at:
+                  type: string
+                  format: date-time
+                  description: End of the new billing period.
+                  example: "2026-03-31T00:00:00Z"
+            example:
+              current_period_starts_at: "2026-03-19T00:00:00Z"
+              current_period_ends_at: "2026-03-31T00:00:00Z"
+      responses:
+        '200':
+          description: Subscription renewed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+              example:
+                data:
+                  id: 10
+                  user_id: 42
+                  plan_id: 1
+                  plan_price_id: 2
+                  status: active
+                  started_at: "2026-03-03T00:00:00Z"
+                  trial_starts_at: null
+                  trial_ends_at: null
+                  current_period_starts_at: "2026-03-19T00:00:00Z"
+                  current_period_ends_at: "2026-03-31T00:00:00Z"
+                  grace_period_ends_at: null
+                  canceled_at: null
+                  expires_at: null
+                  created_at: "2026-03-03T00:00:00Z"
+                  updated_at: "2026-03-19T00:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscriptions/{subscription_id}/mark-past-due:
+    parameters:
+      - $ref: '#/components/parameters/SubscriptionIdParam'
+
+    post:
+      tags: [subscriptions]
+      summary: Mark a subscription as past due
+      description: |
+        Transitions the subscription to **past_due** status and sets `grace_period_ends_at`.
+        The grace period allows the subscriber time to resolve the payment failure.
+        `grace_period_ends_at` is typically `now + plan_price.grace_period_days`.
+        Valid from status: `active`.
+      operationId: markSubscriptionPastDue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - grace_period_ends_at
+              properties:
+                grace_period_ends_at:
+                  type: string
+                  format: date-time
+                  description: The deadline after which the subscription is automatically canceled if no payment is received.
+                  example: "2026-03-22T00:00:00Z"
+            example:
+              grace_period_ends_at: "2026-03-22T00:00:00Z"
+      responses:
+        '200':
+          description: Subscription marked as past due.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+              example:
+                data:
+                  id: 10
+                  user_id: 42
+                  plan_id: 1
+                  plan_price_id: 2
+                  status: past_due
+                  started_at: "2026-03-03T00:00:00Z"
+                  trial_starts_at: null
+                  trial_ends_at: null
+                  current_period_starts_at: "2026-03-07T00:00:00Z"
+                  current_period_ends_at: "2026-03-19T00:00:00Z"
+                  grace_period_ends_at: "2026-03-22T00:00:00Z"
+                  canceled_at: null
+                  expires_at: null
+                  created_at: "2026-03-03T00:00:00Z"
+                  updated_at: "2026-03-19T00:05:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscriptions/{subscription_id}/activate:
+    parameters:
+      - $ref: '#/components/parameters/SubscriptionIdParam'
+
+    post:
+      tags: [subscriptions]
+      summary: Activate a subscription
+      description: |
+        Transitions the subscription to **active** status.
+        Clears `grace_period_ends_at` if previously set.
+        Requires the new billing period boundaries.
+        Valid from statuses: `pending`, `trialing`, `past_due`.
+      operationId: activateSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_period_starts_at
+                - current_period_ends_at
+              properties:
+                current_period_starts_at:
+                  type: string
+                  format: date-time
+                  description: Start of the first or resumed billing period.
+                  example: "2026-03-14T00:00:00Z"
+                current_period_ends_at:
+                  type: string
+                  format: date-time
+                  description: End of the first or resumed billing period.
+                  example: "2026-03-28T00:00:00Z"
+            example:
+              current_period_starts_at: "2026-03-14T00:00:00Z"
+              current_period_ends_at: "2026-03-28T00:00:00Z"
+      responses:
+        '200':
+          description: Subscription activated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+              example:
+                data:
+                  id: 11
+                  user_id: 42
+                  plan_id: 1
+                  plan_price_id: 2
+                  status: active
+                  started_at: "2026-03-07T00:00:00Z"
+                  trial_starts_at: "2026-03-07T00:00:00Z"
+                  trial_ends_at: "2026-03-14T00:00:00Z"
+                  current_period_starts_at: "2026-03-14T00:00:00Z"
+                  current_period_ends_at: "2026-03-28T00:00:00Z"
+                  grace_period_ends_at: null
+                  canceled_at: null
+                  expires_at: null
+                  created_at: "2026-03-07T00:00:00Z"
+                  updated_at: "2026-03-14T00:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscriptions/{subscription_id}/expire:
+    parameters:
+      - $ref: '#/components/parameters/SubscriptionIdParam'
+
+    post:
+      tags: [subscriptions]
+      summary: Expire a subscription
+      description: |
+        Transitions the subscription to **expired** status and sets `expires_at`.
+        Typically triggered by a scheduled job when `current_period_ends_at` or `grace_period_ends_at` has passed without payment.
+        Valid from statuses: `active`, `past_due`, `canceled`.
+      operationId: expireSubscription
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expires_at:
+                  type: string
+                  format: date-time
+                  description: Explicit expiry datetime. Defaults to the current server time if omitted.
+                  example: "2026-03-22T00:00:00Z"
+            example:
+              expires_at: "2026-03-22T00:00:00Z"
+      responses:
+        '200':
+          description: Subscription expired successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+              example:
+                data:
+                  id: 10
+                  user_id: 42
+                  plan_id: 1
+                  plan_price_id: 2
+                  status: expired
+                  started_at: "2026-03-03T00:00:00Z"
+                  trial_starts_at: null
+                  trial_ends_at: null
+                  current_period_starts_at: "2026-03-07T00:00:00Z"
+                  current_period_ends_at: "2026-03-19T00:00:00Z"
+                  grace_period_ends_at: "2026-03-22T00:00:00Z"
+                  canceled_at: null
+                  expires_at: "2026-03-22T00:00:00Z"
+                  created_at: "2026-03-03T00:00:00Z"
+                  updated_at: "2026-03-22T00:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+
+  /subscription-transactions:
+    get:
+      tags: [subscription transactions]
+      summary: List subscription transactions
+      description: Returns a paginated list of payment transactions. Filterable by subscription, status, currency, and provider.
+      operationId: listSubscriptionTransactions
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: subscription_id
+          in: query
+          description: Filter by subscription ID.
+          schema:
+            type: integer
+            example: 10
+        - name: status
+          in: query
+          description: Filter by transaction status.
+          schema:
+            type: string
+            enum: [pending, paid, failed, refunded]
+            example: paid
+        - name: currency
+          in: query
+          description: Filter by ISO 4217 currency code.
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 3
+            example: USD
+        - name: provider
+          in: query
+          description: Filter by payment provider name.
+          schema:
+            type: string
+            example: stripe
+      responses:
+        '200':
+          description: A paginated list of transactions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubscriptionTransactionsResponse'
+              example:
+                data:
+                  - id: 100
+                    subscription_id: 10
+                    reference: TXN-2024-001
+                    amount: 9.99
+                    currency: USD
+                    status: paid
+                    provider: stripe
+                    provider_transaction_id: pi_3NXyZ1234567890
+                    paid_at: "2026-03-07T08:00:00Z"
+                    failed_at: null
+                    failure_reason: null
+                    metadata:
+                      gateway_response_code: "00"
+                      card_last4: "4242"
+                    created_at: "2026-03-07T07:55:00Z"
+                    updated_at: "2026-03-07T08:00:00Z"
+                meta:
+                  current_page: 1
+                  per_page: 15
+                  total: 1
+                  last_page: 1
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [subscription transactions]
+      summary: Create a subscription transaction
+      description: |
+        Records a new payment transaction attempt for a subscription.
+        The `reference` field must be globally unique across all transactions.
+        The `metadata` field can carry any gateway-specific data such as checkout session IDs.
+      operationId: createSubscriptionTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionTransactionCreateRequest'
+            example:
+              subscription_id: 10
+              reference: TXN-2024-002
+              amount: 9.99
+              currency: USD
+              status: pending
+              provider: stripe
+              provider_transaction_id: null
+              metadata:
+                checkout_session_id: cs_test_abc123
+      responses:
+        '201':
+          description: Transaction created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionTransaction'
+              example:
+                data:
+                  id: 101
+                  subscription_id: 10
+                  reference: TXN-2024-002
+                  amount: 9.99
+                  currency: USD
+                  status: pending
+                  provider: stripe
+                  provider_transaction_id: null
+                  paid_at: null
+                  failed_at: null
+                  failure_reason: null
+                  metadata:
+                    checkout_session_id: cs_test_abc123
+                  created_at: "2026-03-19T07:50:00Z"
+                  updated_at: "2026-03-19T07:50:00Z"
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscription-transactions/{transaction_id}:
+    parameters:
+      - $ref: '#/components/parameters/TransactionIdParam'
+
+    get:
+      tags: [subscription transactions]
+      summary: Get a transaction by ID
+      description: Returns a single transaction resource by its ID.
+      operationId: getSubscriptionTransaction
+      responses:
+        '200':
+          description: Transaction found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionTransaction'
+              example:
+                data:
+                  id: 100
+                  subscription_id: 10
+                  reference: TXN-2024-001
+                  amount: 9.99
+                  currency: USD
+                  status: paid
+                  provider: stripe
+                  provider_transaction_id: pi_3NXyZ1234567890
+                  paid_at: "2026-03-07T08:00:00Z"
+                  failed_at: null
+                  failure_reason: null
+                  metadata:
+                    gateway_response_code: "00"
+                    card_last4: "4242"
+                  created_at: "2026-03-07T07:55:00Z"
+                  updated_at: "2026-03-07T08:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [subscription transactions]
+      summary: Partially update a transaction
+      description: |
+        Updates mutable metadata fields on a transaction such as `provider_transaction_id` and `metadata`.
+        Status transitions must use the dedicated action endpoints.
+      operationId: updateSubscriptionTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionTransactionUpdateRequest'
+            example:
+              provider_transaction_id: pi_3NXyZ1234567890
+              metadata:
+                gateway_response_code: "00"
+                card_last4: "4242"
+      responses:
+        '200':
+          description: Transaction updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionTransaction'
+              example:
+                data:
+                  id: 101
+                  subscription_id: 10
+                  reference: TXN-2024-002
+                  amount: 9.99
+                  currency: USD
+                  status: pending
+                  provider: stripe
+                  provider_transaction_id: pi_3NXyZ1234567890
+                  paid_at: null
+                  failed_at: null
+                  failure_reason: null
+                  metadata:
+                    gateway_response_code: "00"
+                    card_last4: "4242"
+                  created_at: "2026-03-19T07:50:00Z"
+                  updated_at: "2026-03-19T07:55:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscription-transactions/{transaction_id}/mark-paid:
+    parameters:
+      - $ref: '#/components/parameters/TransactionIdParam'
+
+    post:
+      tags: [subscription transactions]
+      summary: Mark a transaction as paid
+      description: |
+        Transitions the transaction status to **paid** and records the `paid_at` timestamp.
+        Valid from statuses: `pending`, `failed`.
+      operationId: markTransactionPaid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paid_at:
+                  type: string
+                  format: date-time
+                  description: Override the paid timestamp. Defaults to the current server time if omitted.
+                  example: "2026-03-19T08:10:00Z"
+                provider_transaction_id:
+                  type: string
+                  nullable: true
+                  description: Final provider transaction ID if not previously recorded.
+                  example: pi_3NXyZ1234567890
+            example:
+              paid_at: "2026-03-19T08:10:00Z"
+              provider_transaction_id: pi_3NXyZ1234567890
+      responses:
+        '200':
+          description: Transaction marked as paid.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionTransaction'
+              example:
+                data:
+                  id: 101
+                  subscription_id: 10
+                  reference: TXN-2024-002
+                  amount: 9.99
+                  currency: USD
+                  status: paid
+                  provider: stripe
+                  provider_transaction_id: pi_3NXyZ1234567890
+                  paid_at: "2026-03-19T08:10:00Z"
+                  failed_at: null
+                  failure_reason: null
+                  metadata:
+                    gateway_response_code: "00"
+                    card_last4: "4242"
+                  created_at: "2026-03-19T07:50:00Z"
+                  updated_at: "2026-03-19T08:10:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscription-transactions/{transaction_id}/mark-failed:
+    parameters:
+      - $ref: '#/components/parameters/TransactionIdParam'
+
+    post:
+      tags: [subscription transactions]
+      summary: Mark a transaction as failed
+      description: |
+        Transitions the transaction status to **failed**, records `failed_at`, and stores the `failure_reason`.
+        Valid from status: `pending`.
+      operationId: markTransactionFailed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - failure_reason
+              properties:
+                failure_reason:
+                  type: string
+                  description: Human-readable description of why the payment failed.
+                  example: Insufficient funds.
+                failed_at:
+                  type: string
+                  format: date-time
+                  description: Override the failed timestamp. Defaults to the current server time if omitted.
+                  example: "2026-03-19T08:10:00Z"
+            example:
+              failure_reason: Insufficient funds.
+              failed_at: "2026-03-19T08:10:00Z"
+      responses:
+        '200':
+          description: Transaction marked as failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionTransaction'
+              example:
+                data:
+                  id: 101
+                  subscription_id: 10
+                  reference: TXN-2024-002
+                  amount: 9.99
+                  currency: USD
+                  status: failed
+                  provider: stripe
+                  provider_transaction_id: null
+                  paid_at: null
+                  failed_at: "2026-03-19T08:10:00Z"
+                  failure_reason: Insufficient funds.
+                  metadata:
+                    checkout_session_id: cs_test_abc123
+                  created_at: "2026-03-19T07:50:00Z"
+                  updated_at: "2026-03-19T08:10:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subscription-transactions/{transaction_id}/refund:
+    parameters:
+      - $ref: '#/components/parameters/TransactionIdParam'
+
+    post:
+      tags: [subscription transactions]
+      summary: Refund a transaction
+      description: |
+        Transitions the transaction status to **refunded**.
+        Valid from status: `paid`.
+        The `metadata` field should be updated with the gateway refund response details.
+      operationId: refundTransaction
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Optional human-readable reason for the refund.
+                  example: Customer asked for a refund.
+                metadata:
+                  type: object
+                  nullable: true
+                  description: Gateway refund response payload to merge into the transaction metadata.
+                  additionalProperties: true
+                  example:
+                    refund_id: re_3NXyZ1234567890
+                    amount_refunded: 9.99
+            example:
+              reason: Customer asked for a refund.
+              metadata:
+                refund_id: re_3NXyZ1234567890
+                amount_refunded: 9.99
+      responses:
+        '200':
+          description: Transaction refunded successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionTransaction'
+              example:
+                data:
+                  id: 100
+                  subscription_id: 10
+                  reference: TXN-2024-001
+                  amount: 9.99
+                  currency: USD
+                  status: refunded
+                  provider: stripe
+                  provider_transaction_id: pi_3NXyZ1234567890
+                  paid_at: "2026-03-07T08:00:00Z"
+                  failed_at: null
+                  failure_reason: null
+                  metadata:
+                    refund_id: re_3NXyZ1234567890
+                    amount_refunded: 9.99
+                  created_at: "2026-03-07T07:55:00Z"
+                  updated_at: "2026-03-14T14:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+
+  parameters:
+
+    PageParam:
+      name: page
+      in: query
+      description: Page number for pagination (1-based).
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+
+    PerPageParam:
+      name: per_page
+      in: query
+      description: Number of items returned per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 15
+        example: 15
+
+    PlanIdParam:
+      name: plan_id
+      in: path
+      required: true
+      description: Unique integer identifier of the plan.
+      schema:
+        type: integer
+        example: 1
+
+    PlanPriceIdParam:
+      name: plan_price_id
+      in: path
+      required: true
+      description: Unique integer identifier of the plan price.
+      schema:
+        type: integer
+        example: 1
+
+    SubscriptionIdParam:
+      name: subscription_id
+      in: path
+      required: true
+      description: Unique integer identifier of the subscription.
+      schema:
+        type: integer
+        example: 10
+
+    TransactionIdParam:
+      name: transaction_id
+      in: path
+      required: true
+      description: Unique integer identifier of the subscription transaction.
+      schema:
+        type: integer
+        example: 100
+
+  responses:
+
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: Resource not found.
+            code: NOT_FOUND
+
+    Conflict:
+      description: A conflict occurred — e.g. duplicate unique field or invalid status transition.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: A plan with this code already exists.
+            code: CONFLICT
+
+    UnprocessableEntity:
+      description: Input validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          example:
+            message: The given data was invalid.
+            errors:
+              code:
+                - The code field is required.
+              price:
+                - The price must be greater than 0.
+
+    InternalServerError:
+      description: An unexpected server error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: An internal server error occurred. Please try again later.
+            code: INTERNAL_SERVER_ERROR
+
+  schemas:
+
+    Plan:
+      type: object
+      description: A subscription plan available in the system.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Auto-incremented primary key.
+          example: 1
+        code:
+          type: string
+          description: Unique machine-readable identifier for the plan.
+          example: pro
+        name:
+          type: string
+          description: Human-readable display name of the plan.
+          example: Pro Plan
+        description:
+          type: string
+          nullable: true
+          description: Optional marketing description of the plan.
+          example: A plan with all premium features.
+        trial_days:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Number of free trial days offered when subscribing to this plan.
+          example: 14
+        is_active:
+          type: boolean
+          description: Whether this plan is currently available to new subscribers.
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-03-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-03-01T00:00:00Z"
+
+    PlanCreateRequest:
+      type: object
+      description: Request body to create a new subscription plan.
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: string
+          description: Unique machine-readable identifier. Lowercase alphanumeric with optional hyphens.
+          minLength: 2
+          maxLength: 64
+          pattern: '^[a-z0-9\-]+$'
+          example: enterprise
+        name:
+          type: string
+          description: Human-readable display name.
+          minLength: 2
+          maxLength: 255
+          example: Enterprise Plan
+        description:
+          type: string
+          nullable: true
+          description: Optional plan description.
+          example: Best plan for large teams.
+        trial_days:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Free trial duration in days. Defaults to 0 (no trial).
+          example: 30
+        is_active:
+          type: boolean
+          default: true
+          description: Whether the plan is immediately active upon creation.
+          example: true
+
+    PlanUpdateRequest:
+      type: object
+      description: Request body for a full plan replacement (PUT). All writable fields are required.
+      required:
+        - code
+        - name
+        - trial_days
+        - is_active
+      properties:
+        code:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: '^[a-z0-9\-]+$'
+          example: basic
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          example: Basic Plan (Updated)
+        description:
+          type: string
+          nullable: true
+          example: Updated basic plan with more features.
+        trial_days:
+          type: integer
+          minimum: 0
+          example: 0
+        is_active:
+          type: boolean
+          example: true
+
+    PlanPatchRequest:
+      type: object
+      description: Request body for a partial plan update (PATCH). All fields are optional.
+      properties:
+        code:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: '^[a-z0-9\-]+$'
+          example: basic
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          example: Basic Plan Revised
+        description:
+          type: string
+          nullable: true
+          example: A short description for this plan.
+        trial_days:
+          type: integer
+          minimum: 0
+          example: 7
+        is_active:
+          type: boolean
+          example: false
+
+  
+    PlanPrice:
+      type: object
+      description: A pricing entry for a specific plan, billing cycle, and currency combination.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Auto-incremented primary key.
+          example: 1
+        plan_id:
+          type: integer
+          description: ID of the parent plan.
+          example: 1
+        billing_cycle:
+          type: string
+          enum: [monthly, yearly]
+          description: Billing frequency for this price entry.
+          example: monthly
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code (e.g. USD, AED, EGP).
+          example: USD
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Charge amount per billing cycle.
+          example: 9.99
+        grace_period_days:
+          type: integer
+          minimum: 0
+          default: 3
+          description: Days after a payment failure before the subscription is automatically canceled if no payment is received.
+          example: 3
+        is_active:
+          type: boolean
+          description: Whether this price is currently available for new subscriptions.
+          example: true
+        external_price_id:
+          type: string
+          nullable: true
+          description: Corresponding price identifier in an external payment provider (e.g. Stripe price ID).
+          example: price_stripe_001
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-03-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-03-01T00:00:00Z"
+
+    PlanPriceCreateRequest:
+      type: object
+      description: |
+        Request body to create a new plan price.
+        The combination of (plan_id, billing_cycle, currency) must be unique.
+      required:
+        - plan_id
+        - billing_cycle
+        - currency
+        - price
+      properties:
+        plan_id:
+          type: integer
+          example: 1
+        billing_cycle:
+          type: string
+          enum: [monthly, yearly]
+          example: monthly
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          example: AED
+        price:
+          type: number
+          format: float
+          minimum: 0
+          exclusiveMinimum: true
+          example: 36.99
+        grace_period_days:
+          type: integer
+          minimum: 0
+          default: 3
+          example: 5
+        is_active:
+          type: boolean
+          default: true
+          example: true
+        external_price_id:
+          type: string
+          nullable: true
+          example: null
+
+    PlanPriceUpdateRequest:
+      type: object
+      description: Request body for a full plan price replacement (PUT). All writable fields are required.
+      required:
+        - plan_id
+        - billing_cycle
+        - currency
+        - price
+        - grace_period_days
+        - is_active
+      properties:
+        plan_id:
+          type: integer
+          example: 1
+        billing_cycle:
+          type: string
+          enum: [monthly, yearly]
+          example: monthly
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          example: USD
+        price:
+          type: number
+          format: float
+          minimum: 0
+          exclusiveMinimum: true
+          example: 12.99
+        grace_period_days:
+          type: integer
+          minimum: 0
+          example: 5
+        is_active:
+          type: boolean
+          example: true
+        external_price_id:
+          type: string
+          nullable: true
+          example: price_stripe_xyz
+
+    PlanPricePatchRequest:
+      type: object
+      description: Request body for a partial plan price update (PATCH). All fields are optional.
+      properties:
+        price:
+          type: number
+          format: float
+          minimum: 0
+          exclusiveMinimum: true
+          example: 11.49
+        grace_period_days:
+          type: integer
+          minimum: 0
+          example: 7
+        is_active:
+          type: boolean
+          example: true
+        external_price_id:
+          type: string
+          nullable: true
+          example: null
+
+    
+    Subscription:
+      type: object
+      description: Represents a user's subscription to a plan at a specific price.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Auto-incremented primary key.
+          example: 10
+        user_id:
+          type: integer
+          description: ID of the subscribing user.
+          example: 42
+        plan_id:
+          type: integer
+          description: ID of the subscribed plan.
+          example: 1
+        plan_price_id:
+          type: integer
+          description: ID of the plan price used for billing.
+          example: 2
+        status:
+          type: string
+          enum: [pending, trialing, active, past_due, canceled, expired]
+          description: Current lifecycle status of the subscription.
+          example: active
+        started_at:
+          type: string
+          format: date-time
+          description: Datetime when the subscription was first created.
+          example: "2026-03-03T00:00:00Z"
+        trial_starts_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Start of the trial period. Null if no trial was granted.
+          example: null
+        trial_ends_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: End of the trial period. Null if no trial was granted.
+          example: null
+        current_period_starts_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Start of the current paid billing period.
+          example: "2026-03-07T00:00:00Z"
+        current_period_ends_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: End of the current paid billing period.
+          example: "2026-03-19T00:00:00Z"
+        grace_period_ends_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Deadline for payment resolution when subscription is in past_due status.
+          example: null
+        canceled_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Datetime when the subscription was canceled. Null if not canceled.
+          example: null
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Datetime when the subscription fully expired. Null if still active.
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-03-03T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-03-07T00:00:00Z"
+
+    SubscriptionCreateRequest:
+      type: object
+      description: |
+        Request body to create a new subscription.
+        - `user_id` is derived from the authenticated token — not required in the request.
+        - Currency is auto-detected from the client IP address (UAE ranges → AED, all others → USD).
+        - Falls back to USD if no AED price exists for the selected plan.
+        - `plan_price_id` is resolved automatically from `plan_id` + `billing_cycle` + detected currency.
+        - Trial is automatically applied if the plan has `trial_days > 0` AND the user has never had a trial.
+      required:
+        - plan_id
+        - billing_cycle
+      properties:
+        plan_id:
+          type: integer
+          description: ID of the plan to subscribe to.
+          example: 1
+        billing_cycle:
+          type: string
+          enum: [monthly, yearly]
+          description: Desired billing frequency.
+          example: monthly
+
+    SubscriptionUpdateRequest:
+      type: object
+      description: |
+        Admin-only. Allows extending the subscription end date.
+        Only `current_period_ends_at` may be updated — start date and trial dates are immutable.
+      required:
+        - current_period_ends_at
+      properties:
+        current_period_ends_at:
+          type: string
+          format: date-time
+          description: New end date for the current billing period. Must be a future datetime.
+          example: "2027-01-01T00:00:00Z"
+
+
+    SubscriptionTransaction:
+      type: object
+      description: A payment transaction record associated with a subscription.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Auto-incremented primary key.
+          example: 100
+        subscription_id:
+          type: integer
+          description: ID of the related subscription.
+          example: 10
+        reference:
+          type: string
+          description: Globally unique transaction reference.
+          example: TXN-2024-001
+        amount:
+          type: number
+          format: float
+          description: Transaction amount charged.
+          example: 9.99
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code.
+          example: USD
+        status:
+          type: string
+          enum: [pending, paid, failed, refunded]
+          description: Current payment status of the transaction.
+          example: paid
+        provider:
+          type: string
+          nullable: true
+          description: Name of the payment provider used (e.g. stripe, paypal).
+          example: stripe
+        provider_transaction_id:
+          type: string
+          nullable: true
+          description: Transaction or payment intent ID from the provider.
+          example: pi_3NXyZ1234567890
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Datetime when payment was confirmed. Null until status is paid.
+          example: "2026-03-07T08:00:00Z"
+        failed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Datetime when the payment failed. Null unless status is failed.
+          example: null
+        failure_reason:
+          type: string
+          nullable: true
+          description: Human-readable payment failure description.
+          example: null
+        metadata:
+          type: object
+          nullable: true
+          description: Arbitrary JSON payload from the payment gateway response.
+          additionalProperties: true
+          example:
+            gateway_response_code: "00"
+            card_last4: "4242"
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-03-07T07:55:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-03-07T08:00:00Z"
+
+    SubscriptionTransactionCreateRequest:
+      type: object
+      description: |
+        Admin-only. Creates a new pending payment transaction for a subscription.
+        - `reference` is auto-generated as `TXN-XXXXXXXXXXXX` (random 12-char uppercase string).
+        - `amount` and `currency` are auto-taken from the subscription's linked `plan_price`.
+        - `status` is always set to `pending` on creation.
+        - Subscription must be in `pending`, `trialing`, or `past_due` status.
+      required:
+        - subscription_id
+      properties:
+        subscription_id:
+          type: integer
+          description: ID of the subscription this transaction belongs to.
+          example: 10
+        provider:
+          type: string
+          nullable: true
+          description: Payment provider name (e.g. stripe, manual).
+          example: manual
+        provider_transaction_id:
+          type: string
+          nullable: true
+          description: Provider transaction ID if available at creation time.
+          example: null
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Arbitrary gateway data to store alongside the transaction.
+          example:
+            checkout_session_id: cs_test_abc123
+
+    SubscriptionTransactionUpdateRequest:
+      type: object
+      description: Request body for a partial transaction metadata update (PATCH).
+      properties:
+        provider:
+          type: string
+          nullable: true
+          description: Update or set the payment provider name.
+          example: stripe
+        provider_transaction_id:
+          type: string
+          nullable: true
+          description: Provider transaction ID once returned by the gateway.
+          example: pi_3NXyZ1234567890
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Metadata to merge into the existing transaction metadata.
+          example:
+            gateway_response_code: "00"
+            card_last4: "4242"
+
+
+    ErrorResponse:
+      type: object
+      description: Standard error envelope returned for 4xx and 5xx responses.
+      properties:
+        message:
+          type: string
+          description: Human-readable error description.
+          example: Resource not found.
+        code:
+          type: string
+          description: Machine-readable error code for programmatic handling.
+          example: NOT_FOUND
+
+    ValidationErrorResponse:
+      type: object
+      description: Error envelope returned when request input fails validation (422).
+      properties:
+        message:
+          type: string
+          description: Top-level validation error summary.
+          example: The given data was invalid.
+        errors:
+          type: object
+          description: Map of field names to their respective validation error messages.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            code:
+              - The code field is required.
+            price:
+              - The price must be greater than 0.
+
+    PaginationMeta:
+      type: object
+      description: Pagination metadata included in all paginated list responses.
+      properties:
+        current_page:
+          type: integer
+          description: The current page number (1-based).
+          example: 1
+        per_page:
+          type: integer
+          description: Number of items per page.
+          example: 15
+        total:
+          type: integer
+          description: Total number of records matching the query filters.
+          example: 42
+        last_page:
+          type: integer
+          description: The last available page number given the current per_page.
+          example: 3
+
+    PaginatedPlansResponse:
+      type: object
+      description: Paginated collection of plan resources.
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginatedPlanPricesResponse:
+      type: object
+      description: Paginated collection of plan price resources.
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanPrice'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginatedSubscriptionsResponse:
+      type: object
+      description: Paginated collection of subscription resources.
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subscription'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginatedSubscriptionTransactionsResponse:
+      type: object
+      description: Paginated collection of subscription transaction resources.
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionTransaction'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'

@@ -1,0 +1,468 @@
+@baseUrl = http://localhost:8000/api
+@adminToken = 7|nHm7jXGihUvZiQZP9mVWNILNyDg2VaacOFqspTJS1e085f71
+@userToken  = 5|OVHvjAVCcdj2YzWKagtWovgeiblstYBGj9pOIMRh2483471b
+
+###
+# ============================================================
+# AUTH
+# ============================================================
+
+### [1] Register normal user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "zamil@test.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+
+### [2] Register admin (already seeded — just login)
+
+### [3] Login as admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@admin.com",
+  "password": "admin123"
+}
+
+### [4] Login as normal user
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@test.com",
+  "password": "password123"
+}
+
+### [5] Logout (requires token)
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{adminToken}}
+
+###
+# ============================================================
+# PLANS — WITHOUT AUTH (expect 401)
+# ============================================================
+
+### [6] Get plans list — no auth → 401
+GET {{baseUrl}}/plans
+
+### [7] Create plan — no auth → 401
+POST {{baseUrl}}/plans
+Content-Type: application/json
+
+{
+  "code": "basic",
+  "name": "Basic Plan"
+}
+
+### [8] Update plan — no auth → 401
+PUT {{baseUrl}}/plans/1
+Content-Type: application/json
+
+{
+  "name": "Basic Plan Updated",
+  "trial_days": 7,
+  "is_active": true
+}
+
+### [9] Delete plan — no auth → 401
+DELETE {{baseUrl}}/plans/1
+
+###
+# ============================================================
+# PLANS — WITH USER TOKEN (not admin, expect 403 for writes)
+# ============================================================
+
+### [10] Get plans list — user token → 200
+GET {{baseUrl}}/plans
+Authorization: Bearer {{userToken}}
+
+### [11] Get plan details (user view) — user token → 200
+GET {{baseUrl}}/plans/1/details
+Authorization: Bearer {{userToken}}
+
+### [12] Create plan — user token (not admin) → 403
+POST {{baseUrl}}/plans
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "code": "basic",
+  "name": "Basic Plan",
+  "trial_days": 7,
+  "is_active": true
+}
+
+### [13] Delete plan — user token → 403
+DELETE {{baseUrl}}/plans/1
+Authorization: Bearer {{userToken}}
+
+###
+# ============================================================
+# PLANS — WITH ADMIN TOKEN (expect success)
+# ============================================================
+
+### [14] Create plan — admin → 201
+POST {{baseUrl}}/plans
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "code": "basic",
+  "name": "Basic Plan",
+  "description": "Entry level plan",
+  "trial_days": 7,
+  "is_active": true
+}
+
+### [15] Create plan duplicate code — admin → 422
+POST {{baseUrl}}/plans
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "code": "basic",
+  "name": "Basic Plan Duplicate",
+  "trial_days": 0,
+  "is_active": true
+}
+
+### [16] Create second plan (for testing)
+POST {{baseUrl}}/plans
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "code": "pro",
+  "name": "Pro Plan",
+  "trial_days": 14,
+  "is_active": true
+}
+
+### [17] Get plan (admin view) — admin → 200
+GET {{baseUrl}}/plans/1
+Authorization: Bearer {{adminToken}}
+
+### [18] Update plan (PUT) — admin → 200
+PUT {{baseUrl}}/plans/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Basic Plan Updated",
+  "description": "Updated description",
+  "trial_days": 7,
+  "is_active": true
+}
+
+### [19] Patch plan (PATCH) — admin → 200
+PATCH {{baseUrl}}/plans/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "is_active": false
+}
+
+### [20] Public plans list — no auth → 200 (active only)
+GET {{baseUrl}}/plans/public
+
+### [21] Delete plan that has no relations — admin → 204
+DELETE {{baseUrl}}/plans/2
+Authorization: Bearer {{adminToken}}
+
+###
+# ============================================================
+# PLAN PRICES — WITHOUT AUTH (expect 401)
+# ============================================================
+
+### [22] Get plan prices — no auth → 401
+GET {{baseUrl}}/plan-prices
+
+### [23] Create plan price — no auth → 401
+POST {{baseUrl}}/plan-prices
+Content-Type: application/json
+
+{
+  "plan_id": 1,
+  "billing_cycle": "monthly",
+  "currency": "USD",
+  "price": 9.99
+}
+
+###
+# ============================================================
+# PLAN PRICES — WITH USER TOKEN (expect 403 for writes)
+# ============================================================
+
+### [24] Get plan prices — user token → 200
+GET {{baseUrl}}/plan-prices?plan_id=1
+Authorization: Bearer {{userToken}}
+
+### [25] Create plan price — user token → 403
+POST {{baseUrl}}/plan-prices
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "plan_id": 1,
+  "billing_cycle": "monthly",
+  "currency": "USD",
+  "price": 9.99
+}
+
+###
+# ============================================================
+# PLAN PRICES — WITH ADMIN TOKEN (expect success)
+# ============================================================
+
+### [26] Create plan price — admin → 201
+POST {{baseUrl}}/plan-prices
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "plan_id": 1,
+  "billing_cycle": "monthly",
+  "currency": "USD",
+  "price": 9.99,
+  "grace_period_days": 3,
+  "is_active": true
+}
+
+### [27] Create same plan price (duplicate) — admin → 409
+POST {{baseUrl}}/plan-prices
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "plan_id": 1,
+  "billing_cycle": "monthly",
+  "currency": "USD",
+  "price": 12.99
+}
+
+### [28] Create price for inactive plan — admin → 422
+POST {{baseUrl}}/plan-prices
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "plan_id": 1,
+  "billing_cycle": "yearly",
+  "currency": "USD",
+  "price": 99.99
+}
+
+### [29] Create yearly price — admin → 201
+POST {{baseUrl}}/plan-prices
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "plan_id": 1,
+  "billing_cycle": "yearly",
+  "currency": "USD",
+  "price": 99.99,
+  "grace_period_days": 5,
+  "is_active": true
+}
+
+### [30] Patch plan price — admin → 200
+PATCH {{baseUrl}}/plan-prices/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "is_active": false
+}
+
+### [31] Delete plan price (no subscriptions) — admin → 204
+DELETE {{baseUrl}}/plan-prices/2
+Authorization: Bearer {{adminToken}}
+
+### [32] Delete plan that has prices — admin → 409
+DELETE {{baseUrl}}/plans/1
+Authorization: Bearer {{adminToken}}
+
+###
+# ============================================================
+# SUBSCRIPTIONS — NO AUTH
+# ============================================================
+
+### [33] Get subscriptions — no auth → 401
+GET {{baseUrl}}/subscriptions
+
+### [34] Create subscription — no auth → 401
+POST {{baseUrl}}/subscriptions
+Content-Type: application/json
+
+{
+  "plan_id": 1,
+  "billing_cycle": "monthly"
+}
+
+###
+# ============================================================
+# SUBSCRIPTIONS — WITH USER TOKEN
+# ============================================================
+
+### [35] Create subscription — user (first time, gets trial) → 201
+POST {{baseUrl}}/subscriptions
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "plan_id": 1,
+  "billing_cycle": "monthly"
+}
+
+### [36] Create subscription again — user (already active/trialing) → 409
+POST {{baseUrl}}/subscriptions
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "plan_id": 1,
+  "billing_cycle": "monthly"
+}
+
+### [37] Get my subscriptions — user → 200
+GET {{baseUrl}}/subscriptions
+Authorization: Bearer {{userToken}}
+
+### [38] Get subscription details — user (own) → 200
+GET {{baseUrl}}/subscriptions/1
+Authorization: Bearer {{userToken}}
+
+### [39] Cancel subscription — user (own) → 200
+POST {{baseUrl}}/subscriptions/1/cancel
+Authorization: Bearer {{userToken}}
+
+### [40] Cancel already canceled — user → 422
+POST {{baseUrl}}/subscriptions/1/cancel
+Authorization: Bearer {{userToken}}
+
+### [41] Cancel subscription of another user — user → 403
+POST {{baseUrl}}/subscriptions/1/cancel
+Authorization: Bearer {{adminToken}}
+
+###
+# ============================================================
+# SUBSCRIPTIONS — WITH ADMIN TOKEN
+# ============================================================
+
+### [42] Get all subscriptions — admin → 200
+GET {{baseUrl}}/subscriptions
+Authorization: Bearer {{adminToken}}
+
+### [43] Activate subscription — admin → 200
+POST {{baseUrl}}/subscriptions/1/activate
+Authorization: Bearer {{adminToken}}
+
+### [44] Activate already active — admin → 422
+POST {{baseUrl}}/subscriptions/1/activate
+Authorization: Bearer {{adminToken}}
+
+### [45] Mark past due — admin → 200
+POST {{baseUrl}}/subscriptions/1/mark-past-due
+Authorization: Bearer {{adminToken}}
+
+### [46] Renew subscription — user → 403 (system only)
+POST {{baseUrl}}/subscriptions/1/renew
+Authorization: Bearer {{userToken}}
+
+### [47] Expire subscription — admin → 200
+POST {{baseUrl}}/subscriptions/1/expire
+Authorization: Bearer {{adminToken}}
+
+### [48] Extend period — admin → 200
+PUT {{baseUrl}}/subscriptions/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "current_period_ends_at": "2027-01-01 00:00:00"
+}
+
+### [49] Extend period — user → 403
+PUT {{baseUrl}}/subscriptions/1
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "current_period_ends_at": "2027-01-01 00:00:00"
+}
+
+###
+# ============================================================
+# SUBSCRIPTION TRANSACTIONS — NO AUTH
+# ============================================================
+
+### [50] Get transactions — no auth → 401
+GET {{baseUrl}}/subscription-transactions
+
+###
+# ============================================================
+# SUBSCRIPTION TRANSACTIONS — ADMIN
+# ============================================================
+
+### [51] Create transaction — admin → 201
+POST {{baseUrl}}/subscription-transactions
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "subscription_id": 1,
+  "provider": "manual"
+}
+
+### [52] Create transaction — user → 403
+POST {{baseUrl}}/subscription-transactions
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "subscription_id": 1
+}
+
+### [53] Get all transactions — admin → 200
+GET {{baseUrl}}/subscription-transactions
+Authorization: Bearer {{adminToken}}
+
+### [54] Get transaction — user (own subscription) → 200
+GET {{baseUrl}}/subscription-transactions/1
+Authorization: Bearer {{userToken}}
+
+### [55] Mark paid — admin (auto-activates subscription) → 200
+POST {{baseUrl}}/subscription-transactions/1/mark-paid
+Authorization: Bearer {{adminToken}}
+
+### [56] Mark paid again — admin → 422 (not pending)
+POST {{baseUrl}}/subscription-transactions/1/mark-paid
+Authorization: Bearer {{adminToken}}
+
+### [57] Mark failed — admin → 422 (already paid)
+POST {{baseUrl}}/subscription-transactions/1/mark-failed
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "failure_reason": "Card declined"
+}
+
+### [58] Refund — admin → 200 (adds amount back to user balance)
+POST {{baseUrl}}/subscription-transactions/1/refund
+Authorization: Bearer {{adminToken}}
+
+### [59] Refund again — admin → 422 (not paid)
+POST {{baseUrl}}/subscription-transactions/1/refund
+Authorization: Bearer {{adminToken}}
+
+### [60] Get my transactions — user → 200 (max 10)
+GET {{baseUrl}}/subscription-transactions
+Authorization: Bearer {{userToken}}
