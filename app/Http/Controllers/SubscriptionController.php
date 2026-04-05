@@ -166,20 +166,23 @@ class SubscriptionController extends Controller
             return response()->json(['message' => 'Forbidden. Renewals are managed by the system.'], 403);
         }
 
-        if ($subscription->status !== 'active') {
-            return response()->json(['message' => 'Only active subscriptions can be renewed.'], 422);
+        if (! in_array($subscription->status, ['active', 'expired', 'canceled'])) {
+            return response()->json(['message' => 'Only active, expired, or canceled subscriptions can be renewed.'], 422);
         }
 
         $billingCycle = $subscription->planPrice->billing_cycle;
-        $from         = $subscription->current_period_ends_at ?? now();
+        $from         = now();
         $periodEnd    = $billingCycle === 'yearly'
             ? $from->copy()->addYear()
             : $from->copy()->addMonth();
 
         $subscription->update([
+            'status'                   => 'active',
             'current_period_starts_at' => $from,
             'current_period_ends_at'   => $periodEnd,
             'grace_period_ends_at'     => null,
+            'canceled_at'              => null,
+            'expires_at'               => null,
         ]);
 
         return response()->json(['data' => new SubscriptionResource($subscription)]);
