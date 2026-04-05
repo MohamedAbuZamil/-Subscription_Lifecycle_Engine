@@ -1,10 +1,86 @@
 # Testing Guide
 
-How to test the Subscription Lifecycle Engine API using VS Code REST Client.
+How to test the Subscription Lifecycle Engine API — either via **Newman CLI** (automated, recommended) or **VS Code REST Client** (manual).
 
 ---
 
-## Prerequisites
+## 1 — Automated Testing with Newman (Recommended)
+
+### What was tested
+
+The full Postman collection (`tests/postman-collection.json`) was executed via **Newman CLI** against a live **OVH Ubuntu server** running the API.
+
+All **42 requests** completed successfully with **0 failures**:
+
+| Section | Requests | Result |
+|---|---|---|
+| 01 — Auth (register / login / logout) | 3 | ✅ |
+| 02 — Plans (CRUD + PATCH + PUT) | 5 | ✅ |
+| 03 — Plan Prices (create / list / get / patch) | 6 | ✅ |
+| 04 — Subscriptions (create / list / get) | 3 | ✅ |
+| 05 — Transactions (create / mark-paid / mark-failed / refund) | 9 | ✅ |
+| 06 — Lifecycle (cancel / expire / extend / renew) | 4 | ✅ |
+| 07 — Cleanup (delete prices / plan / logout) | 4 | ✅ |
+
+The full output is saved in `newman-results.txt` at the project root on the server.
+
+---
+
+### How to re-run the tests yourself
+
+#### Prerequisites
+
+- Node.js installed
+- Newman installed globally: `npm install -g newman`
+- The Laravel server running (see below)
+
+#### 1. Start the API server
+
+```bash
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+#### 2. Clear rate-limit cache (important on repeated runs)
+
+```bash
+php artisan cache:clear
+```
+
+#### 3. Run Newman
+
+```bash
+newman run tests/postman-collection.json \
+  --env-var "baseUrl=http://127.0.0.1:8000/api" \
+  --delay-request 300 \
+  --verbose \
+  2>&1 | tee newman-results.txt
+```
+
+The collection handles **re-runs automatically** — if a plan, price, or user already exists, it falls back to fetching the existing record instead of failing.
+
+---
+
+### Copy results from server to your local machine
+
+From your local machine (PowerShell on Windows):
+
+```powershell
+scp ubuntu@YOUR_SERVER_IP:/home/ubuntu/-Subscription_Lifecycle_Engine/newman-results.txt C:\zamil\newman-results.txt
+```
+
+Or on Linux/macOS:
+
+```bash
+scp ubuntu@YOUR_SERVER_IP:/home/ubuntu/-Subscription_Lifecycle_Engine/newman-results.txt ./newman-results.txt
+```
+
+Replace `YOUR_SERVER_IP` with your server's IP address.
+
+---
+
+## 2 — Manual Testing with VS Code REST Client
+
+### Prerequisites
 
 Start the server before running any tests:
 
