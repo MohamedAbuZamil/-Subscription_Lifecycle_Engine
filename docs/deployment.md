@@ -9,8 +9,8 @@ How to run the Subscription Lifecycle Engine on a local machine or production se
 ### Step 1 — Clone and configure
 
 ```bash
-git clone https://github.com/your-username/subscription-lifecycle-engine.git
-cd subscription-lifecycle-engine
+git clone https://github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine.git
+cd -Subscription_Lifecycle_Engine
 
 cp .env.example .env
 ```
@@ -68,8 +68,8 @@ sudo apt install php8.2 php8.2-fpm php8.2-mysql php8.2-mbstring php8.2-xml php8.
 
 ```bash
 cd /var/www
-git clone https://github.com/your-username/subscription-lifecycle-engine.git
-cd subscription-lifecycle-engine
+git clone https://github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine.git
+cd -Subscription_Lifecycle_Engine
 
 cp .env.example .env
 ```

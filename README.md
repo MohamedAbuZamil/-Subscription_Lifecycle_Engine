@@ -2,6 +2,9 @@
 
 A production-grade REST API built with **Laravel 11** for managing the full lifecycle of subscription plans — from creation and pricing through trial periods, payments, renewals, and expiry.
 
+**Repository:** [github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine](https://github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine)  
+**Contact:** abozamil4204251@gmail.com
+
 ---
 
 ## Table of Contents

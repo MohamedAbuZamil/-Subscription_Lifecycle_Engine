@@ -21,15 +21,16 @@ info:
     - The `reference` field on a transaction must be globally unique.
     - The `metadata` field may carry raw gateway or provider response payloads.
   contact:
-    name: API Support
+    name: Mohamed Abo Zamil
     email: abozamil4204251@gmail.com
+    url: https://github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine
   license:
     name: MIT
 
 servers:
-  - url: https://api.example.com/v1
-    description: Productio
-  - url: http://localhost:8000/v1
+  - url: https://github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine
+    description: GitHub Repository
+  - url: http://localhost:8000/api
     description: Local Development
 
 tags:
