@@ -66,7 +66,7 @@
       "item": [
         {
           "name": "Create plan → planId saved",
-          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('planId',j.data.id+'');"]}}],
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id){pm.collectionVariables.set('planId',j.data.id+'');}else{pm.sendRequest({url:pm.collectionVariables.get('baseUrl')+'/plans',method:'GET',header:[{key:'Authorization',value:'Bearer '+pm.collectionVariables.get('adminToken')},{key:'Accept',value:'application/json'}]},function(err,res){var d=res.json();if(d.data){var p=d.data.find(function(x){return x.code==='basic';});if(p)pm.collectionVariables.set('planId',p.id+'');}});}"]}}],
           "request": {
             "method": "POST",
             "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
@@ -115,7 +115,7 @@
       "item": [
         {
           "name": "Create USD monthly price → usdPriceId saved",
-          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('usdPriceId',j.data.id+'');"]}}],
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id){pm.collectionVariables.set('usdPriceId',j.data.id+'');}else{pm.sendRequest({url:pm.collectionVariables.get('baseUrl')+'/plan-prices',method:'GET',header:[{key:'Authorization',value:'Bearer '+pm.collectionVariables.get('adminToken')},{key:'Accept',value:'application/json'}]},function(err,res){var d=res.json();if(d.data){var p=d.data.find(function(x){return x.currency==='USD'&&x.billing_cycle==='monthly';});if(p)pm.collectionVariables.set('usdPriceId',p.id+'');}});}"]}}],
           "request": {
             "method": "POST",
             "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
@@ -125,7 +125,7 @@
         },
         {
           "name": "Create AED monthly price → aedPriceId saved",
-          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('aedPriceId',j.data.id+'');"]}}],
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id){pm.collectionVariables.set('aedPriceId',j.data.id+'');}else{pm.sendRequest({url:pm.collectionVariables.get('baseUrl')+'/plan-prices',method:'GET',header:[{key:'Authorization',value:'Bearer '+pm.collectionVariables.get('adminToken')},{key:'Accept',value:'application/json'}]},function(err,res){var d=res.json();if(d.data){var p=d.data.find(function(x){return x.currency==='AED'&&x.billing_cycle==='monthly';});if(p)pm.collectionVariables.set('aedPriceId',p.id+'');}});}"]}}],
           "request": {
             "method": "POST",
             "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
