@@ -4,6 +4,15 @@
     "description": "End-to-end ordered collection. Run via Newman or Postman Runner top-to-bottom. Tokens and IDs are saved automatically via test scripts.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": ["pm.request.headers.add({key:'Accept',value:'application/json'});"]
+      }
+    }
+  ],
   "variable": [
     { "key": "baseUrl",        "value": "http://127.0.0.1:8000/api" },
     { "key": "adminToken",     "value": "" },
@@ -30,12 +39,24 @@
         },
         {
           "name": "Register user → userToken saved",
-          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.token) pm.collectionVariables.set('userToken',j.token);"]}}],
+          "event": [{"listen":"test","script":{"exec":["try{var j=pm.response.json();if(j.token)pm.collectionVariables.set('userToken',j.token);}catch(e){}"]}},
+          {"listen":"prerequest","script":{"exec":[""]}}],
           "request": {
             "method": "POST",
             "header": [{"key":"Content-Type","value":"application/json"}],
             "url": {"raw":"{{baseUrl}}/auth/register","host":["{{baseUrl}}"],"path":["auth","register"]},
             "body": {"mode":"raw","raw":"{\n  \"name\": \"Ahmed Ali\",\n  \"email\": \"ahmed@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\"\n}"}
+          }
+        },
+        {
+          "name": "Login user (fallback if already registered)",
+          "event": [{"listen":"test","script":{"exec":["try{var j=pm.response.json();if(j.token)pm.collectionVariables.set('userToken',j.token);}catch(e){}"]}},
+          {"listen":"prerequest","script":{"exec":["if(pm.collectionVariables.get('userToken'))pm.execution.skipRequest();"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "url": {"raw":"{{baseUrl}}/auth/login","host":["{{baseUrl}}"],"path":["auth","login"]},
+            "body": {"mode":"raw","raw":"{\n  \"email\": \"ahmed@example.com\",\n  \"password\": \"password123\"\n}"}
           }
         }
       ]
