@@ -15,10 +15,12 @@ class PlanController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
+        $user    = $request->user();
         $perPage = min($request->integer('per_page', 15), 100);
 
         $plans = Plan::query()
-            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
+            ->when(! $user->is_admin, fn ($q) => $q->where('is_active', true))
+            ->when($user->is_admin && $request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
             ->paginate($perPage);
 
         return PlanResource::collection($plans);
