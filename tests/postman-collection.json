@@ -1,377 +1,389 @@
 {
   "info": {
     "name": "Subscription Lifecycle Engine",
-    "description": "Ordered end-to-end collection. Run requests TOP TO BOTTOM. Each request depends on the one before it. Step 1: run [01] and [02] first to get tokens, then proceed in order.",
+    "description": "End-to-end ordered collection. Run via Newman or Postman Runner top-to-bottom. Tokens and IDs are saved automatically via test scripts.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",        "value": "http://127.0.0.1:8000/api", "type": "string" },
-    { "key": "adminToken",     "value": "",                           "type": "string" },
-    { "key": "userToken",      "value": "",                           "type": "string" },
-    { "key": "planId",         "value": "",                          "type": "string" },
-    { "key": "usdPriceId",     "value": "",                          "type": "string" },
-    { "key": "aedPriceId",     "value": "",                          "type": "string" },
-    { "key": "subscriptionId", "value": "",                          "type": "string" },
-    { "key": "transactionId",  "value": "",                          "type": "string" }
+    { "key": "baseUrl",        "value": "http://127.0.0.1:8000/api" },
+    { "key": "adminToken",     "value": "" },
+    { "key": "userToken",      "value": "" },
+    { "key": "planId",         "value": "" },
+    { "key": "usdPriceId",     "value": "" },
+    { "key": "aedPriceId",     "value": "" },
+    { "key": "subscriptionId", "value": "" },
+    { "key": "transactionId",  "value": "" }
   ],
   "item": [
     {
-      "name": "STEP 1 — Auth (run these first)",
+      "name": "01 — Auth",
       "item": [
         {
-          "name": "[01] Login admin → saves adminToken automatically",
-          "event": [{ "listen": "test", "script": { "exec": [
-            "const json = pm.response.json();",
-            "if (json.token) pm.collectionVariables.set('adminToken', json.token);"
-          ]}}],
+          "name": "Login admin → adminToken saved",
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.token) pm.collectionVariables.set('adminToken',j.token);"]}}],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"] },
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@admin.com\",\n  \"password\": \"admin123\"\n}" }
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "url": {"raw":"{{baseUrl}}/auth/login","host":["{{baseUrl}}"],"path":["auth","login"]},
+            "body": {"mode":"raw","raw":"{\n  \"email\": \"admin@admin.com\",\n  \"password\": \"admin123\"\n}"}
           }
         },
         {
-          "name": "[02] Register user → saves userToken automatically",
-          "event": [{ "listen": "test", "script": { "exec": [
-            "const json = pm.response.json();",
-            "if (json.token) pm.collectionVariables.set('userToken', json.token);"
-          ]}}],
+          "name": "Register user → userToken saved",
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.token) pm.collectionVariables.set('userToken',j.token);"]}}],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth","register"] },
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ahmed Ali\",\n  \"email\": \"ahmed@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\"\n}" }
-          }
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
-            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth","logout"] }
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "url": {"raw":"{{baseUrl}}/auth/register","host":["{{baseUrl}}"],"path":["auth","register"]},
+            "body": {"mode":"raw","raw":"{\n  \"name\": \"Ahmed Ali\",\n  \"email\": \"ahmed@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\"\n}"}
           }
         }
       ]
     },
     {
-      "name": "Plans",
+      "name": "02 — Plans",
       "item": [
         {
-          "name": "List plans (any auth)",
+          "name": "Create plan → planId saved",
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('planId',j.data.id+'');"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plans","host":["{{baseUrl}}"],"path":["plans"]},
+            "body": {"mode":"raw","raw":"{\n  \"code\": \"basic\",\n  \"name\": \"Basic Plan\",\n  \"description\": \"Entry-level plan with trial\",\n  \"trial_days\": 14,\n  \"is_active\": true\n}"}
+          }
+        },
+        {
+          "name": "List plans (admin)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plans", "host": ["{{baseUrl}}"], "path": ["plans"] }
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plans","host":["{{baseUrl}}"],"path":["plans"]}
           }
         },
         {
           "name": "Get plan by ID (admin)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plans/1", "host": ["{{baseUrl}}"], "path": ["plans","1"] }
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plans/{{planId}}","host":["{{baseUrl}}"],"path":["plans","{{planId}}"]}
           }
         },
         {
-          "name": "Create plan (admin)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plans", "host": ["{{baseUrl}}"], "path": ["plans"] },
-            "body": { "mode": "raw", "raw": "{\n  \"code\": \"basic\",\n  \"name\": \"Basic Plan\",\n  \"description\": \"Entry-level plan with trial\",\n  \"trial_days\": 14,\n  \"is_active\": true\n}" }
-          }
-        },
-        {
-          "name": "Update plan (admin — PATCH)",
+          "name": "Update plan PATCH (admin)",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plans/1", "host": ["{{baseUrl}}"], "path": ["plans","1"] },
-            "body": { "mode": "raw", "raw": "{\n  \"is_active\": true\n}" }
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plans/{{planId}}","host":["{{baseUrl}}"],"path":["plans","{{planId}}"]},
+            "body": {"mode":"raw","raw":"{\n  \"is_active\": true\n}"}
           }
         },
         {
-          "name": "Replace plan (admin — PUT)",
+          "name": "Replace plan PUT (admin)",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plans/1", "host": ["{{baseUrl}}"], "path": ["plans","1"] },
-            "body": { "mode": "raw", "raw": "{\n  \"code\": \"basic\",\n  \"name\": \"Basic Plan Updated\",\n  \"description\": \"Updated description\",\n  \"trial_days\": 14,\n  \"is_active\": true\n}" }
-          }
-        },
-        {
-          "name": "Delete plan (admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plans/1", "host": ["{{baseUrl}}"], "path": ["plans","1"] }
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plans/{{planId}}","host":["{{baseUrl}}"],"path":["plans","{{planId}}"]},
+            "body": {"mode":"raw","raw":"{\n  \"code\": \"basic\",\n  \"name\": \"Basic Plan\",\n  \"description\": \"Entry-level plan with trial\",\n  \"trial_days\": 14,\n  \"is_active\": true\n}"}
           }
         }
       ]
     },
     {
-      "name": "Plan Prices",
+      "name": "03 — Plan Prices",
       "item": [
+        {
+          "name": "Create USD monthly price → usdPriceId saved",
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('usdPriceId',j.data.id+'');"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plan-prices","host":["{{baseUrl}}"],"path":["plan-prices"]},
+            "body": {"mode":"raw","raw":"{\n  \"plan_id\": {{planId}},\n  \"billing_cycle\": \"monthly\",\n  \"currency\": \"USD\",\n  \"price\": 9.99,\n  \"grace_period_days\": 3,\n  \"is_active\": true\n}"}
+          }
+        },
+        {
+          "name": "Create AED monthly price → aedPriceId saved",
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('aedPriceId',j.data.id+'');"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plan-prices","host":["{{baseUrl}}"],"path":["plan-prices"]},
+            "body": {"mode":"raw","raw":"{\n  \"plan_id\": {{planId}},\n  \"billing_cycle\": \"monthly\",\n  \"currency\": \"AED\",\n  \"price\": 36.99,\n  \"grace_period_days\": 3,\n  \"is_active\": true\n}"}
+          }
+        },
+        {
+          "name": "Create EGP monthly price (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plan-prices","host":["{{baseUrl}}"],"path":["plan-prices"]},
+            "body": {"mode":"raw","raw":"{\n  \"plan_id\": {{planId}},\n  \"billing_cycle\": \"monthly\",\n  \"currency\": \"EGP\",\n  \"price\": 299.00,\n  \"grace_period_days\": 3,\n  \"is_active\": true\n}"}
+          }
+        },
+        {
+          "name": "Create USD yearly price (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plan-prices","host":["{{baseUrl}}"],"path":["plan-prices"]},
+            "body": {"mode":"raw","raw":"{\n  \"plan_id\": {{planId}},\n  \"billing_cycle\": \"yearly\",\n  \"currency\": \"USD\",\n  \"price\": 99.99,\n  \"grace_period_days\": 3,\n  \"is_active\": true\n}"}
+          }
+        },
         {
           "name": "List plan prices (admin)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plan-prices", "host": ["{{baseUrl}}"], "path": ["plan-prices"] }
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plan-prices","host":["{{baseUrl}}"],"path":["plan-prices"]}
           }
         },
         {
           "name": "Get price by ID (admin)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plan-prices/1", "host": ["{{baseUrl}}"], "path": ["plan-prices","1"] }
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plan-prices/{{usdPriceId}}","host":["{{baseUrl}}"],"path":["plan-prices","{{usdPriceId}}"]}
           }
         },
         {
-          "name": "Create price — USD monthly (admin)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plan-prices", "host": ["{{baseUrl}}"], "path": ["plan-prices"] },
-            "body": { "mode": "raw", "raw": "{\n  \"plan_id\": 1,\n  \"billing_cycle\": \"monthly\",\n  \"currency\": \"USD\",\n  \"price\": 9.99,\n  \"grace_period_days\": 3,\n  \"is_active\": true\n}" }
-          }
-        },
-        {
-          "name": "Create price — AED monthly (admin)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plan-prices", "host": ["{{baseUrl}}"], "path": ["plan-prices"] },
-            "body": { "mode": "raw", "raw": "{\n  \"plan_id\": 1,\n  \"billing_cycle\": \"monthly\",\n  \"currency\": \"AED\",\n  \"price\": 36.99,\n  \"grace_period_days\": 3,\n  \"is_active\": true\n}" }
-          }
-        },
-        {
-          "name": "Create price — EGP monthly (admin)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plan-prices", "host": ["{{baseUrl}}"], "path": ["plan-prices"] },
-            "body": { "mode": "raw", "raw": "{\n  \"plan_id\": 1,\n  \"billing_cycle\": \"monthly\",\n  \"currency\": \"EGP\",\n  \"price\": 299.00,\n  \"grace_period_days\": 3,\n  \"is_active\": true\n}" }
-          }
-        },
-        {
-          "name": "Create price — USD yearly (admin)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plan-prices", "host": ["{{baseUrl}}"], "path": ["plan-prices"] },
-            "body": { "mode": "raw", "raw": "{\n  \"plan_id\": 1,\n  \"billing_cycle\": \"yearly\",\n  \"currency\": \"USD\",\n  \"price\": 99.99,\n  \"grace_period_days\": 3,\n  \"is_active\": true\n}" }
-          }
-        },
-        {
-          "name": "Update price (admin — PATCH)",
+          "name": "Update USD price PATCH (admin)",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plan-prices/1", "host": ["{{baseUrl}}"], "path": ["plan-prices","1"] },
-            "body": { "mode": "raw", "raw": "{\n  \"price\": 11.99\n}" }
-          }
-        },
-        {
-          "name": "Delete price (admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/plan-prices/2", "host": ["{{baseUrl}}"], "path": ["plan-prices","2"] }
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plan-prices/{{usdPriceId}}","host":["{{baseUrl}}"],"path":["plan-prices","{{usdPriceId}}"]},
+            "body": {"mode":"raw","raw":"{\n  \"price\": 11.99\n}"}
           }
         }
       ]
     },
     {
-      "name": "Subscriptions",
+      "name": "04 — Subscriptions",
       "item": [
         {
-          "name": "Create subscription — user (auto detects currency from IP)",
+          "name": "Create subscription — user USD (trialing) → subscriptionId saved",
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('subscriptionId',j.data.id+'');"]}}],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{userToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions", "host": ["{{baseUrl}}"], "path": ["subscriptions"] },
-            "body": { "mode": "raw", "raw": "{\n  \"plan_id\": 1,\n  \"billing_cycle\": \"monthly\"\n}" }
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{userToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions","host":["{{baseUrl}}"],"path":["subscriptions"]},
+            "body": {"mode":"raw","raw":"{\n  \"plan_id\": {{planId}},\n  \"billing_cycle\": \"monthly\"\n}"}
           }
         },
         {
-          "name": "Create subscription — UAE user (AED pricing via X-Country header)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{userToken}}" },
-              { "key": "X-Country", "value": "AE" }
-            ],
-            "url": { "raw": "{{baseUrl}}/subscriptions", "host": ["{{baseUrl}}"], "path": ["subscriptions"] },
-            "body": { "mode": "raw", "raw": "{\n  \"plan_id\": 1,\n  \"billing_cycle\": \"monthly\"\n}" }
-          }
-        },
-        {
-          "name": "List subscriptions (admin — all users)",
+          "name": "List subscriptions (admin — all)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions", "host": ["{{baseUrl}}"], "path": ["subscriptions"] }
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions","host":["{{baseUrl}}"],"path":["subscriptions"]}
           }
         },
         {
-          "name": "List subscriptions (user — own only, max 10)",
+          "name": "List subscriptions (user — own only)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions", "host": ["{{baseUrl}}"], "path": ["subscriptions"] }
+            "header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions","host":["{{baseUrl}}"],"path":["subscriptions"]}
           }
         },
         {
-          "name": "Get subscription by ID",
+          "name": "Get subscription by ID (user)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions/1", "host": ["{{baseUrl}}"], "path": ["subscriptions","1"] }
+            "header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions/{{subscriptionId}}","host":["{{baseUrl}}"],"path":["subscriptions","{{subscriptionId}}"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 — Transactions",
+      "item": [
+        {
+          "name": "Create transaction → transactionId saved",
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('transactionId',j.data.id+'');"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions","host":["{{baseUrl}}"],"path":["subscription-transactions"]},
+            "body": {"mode":"raw","raw":"{\n  \"subscription_id\": {{subscriptionId}},\n  \"provider\": \"manual\"\n}"}
           }
         },
         {
-          "name": "Cancel subscription (owner only)",
+          "name": "List transactions (admin)",
           "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions/1/cancel", "host": ["{{baseUrl}}"], "path": ["subscriptions","1","cancel"] }
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions","host":["{{baseUrl}}"],"path":["subscription-transactions"]}
           }
         },
         {
-          "name": "Activate subscription (admin)",
+          "name": "List transactions (user — own only)",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions","host":["{{baseUrl}}"],"path":["subscription-transactions"]}
+          }
+        },
+        {
+          "name": "Get transaction by ID (admin)",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions/{{transactionId}}","host":["{{baseUrl}}"],"path":["subscription-transactions","{{transactionId}}"]}
+          }
+        },
+        {
+          "name": "Mark paid → subscription becomes active",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions/1/activate", "host": ["{{baseUrl}}"], "path": ["subscriptions","1","activate"] }
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions/{{transactionId}}/mark-paid","host":["{{baseUrl}}"],"path":["subscription-transactions","{{transactionId}}","mark-paid"]}
+          }
+        },
+        {
+          "name": "Get subscription — verify active",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions/{{subscriptionId}}","host":["{{baseUrl}}"],"path":["subscriptions","{{subscriptionId}}"]}
           }
         },
         {
           "name": "Mark past due — starts grace period (admin)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions/1/mark-past-due", "host": ["{{baseUrl}}"], "path": ["subscriptions","1","mark-past-due"] }
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions/{{subscriptionId}}/mark-past-due","host":["{{baseUrl}}"],"path":["subscriptions","{{subscriptionId}}","mark-past-due"]},
+            "body": {"mode":"raw","raw":"{\n  \"grace_period_ends_at\": \"2026-04-10T00:00:00Z\"\n}"}
           }
         },
         {
-          "name": "Renew subscription (admin)",
+          "name": "Get subscription — verify past_due",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions/{{subscriptionId}}","host":["{{baseUrl}}"],"path":["subscriptions","{{subscriptionId}}"]}
+          }
+        },
+        {
+          "name": "Create 2nd transaction for grace period",
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('transactionId',j.data.id+'');"]}}],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions/1/renew", "host": ["{{baseUrl}}"], "path": ["subscriptions","1","renew"] }
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions","host":["{{baseUrl}}"],"path":["subscription-transactions"]},
+            "body": {"mode":"raw","raw":"{\n  \"subscription_id\": {{subscriptionId}},\n  \"provider\": \"manual\"\n}"}
+          }
+        },
+        {
+          "name": "Mark failed (records failure reason)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions/{{transactionId}}/mark-failed","host":["{{baseUrl}}"],"path":["subscription-transactions","{{transactionId}}","mark-failed"]},
+            "body": {"mode":"raw","raw":"{\n  \"failure_reason\": \"Insufficient funds\"\n}"}
+          }
+        },
+        {
+          "name": "Create 3rd transaction and mark paid (reactivate)",
+          "event": [{"listen":"test","script":{"exec":["var j=pm.response.json(); if(j.data&&j.data.id) pm.collectionVariables.set('transactionId',j.data.id+'');"]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions","host":["{{baseUrl}}"],"path":["subscription-transactions"]},
+            "body": {"mode":"raw","raw":"{\n  \"subscription_id\": {{subscriptionId}},\n  \"provider\": \"manual\"\n}"}
+          }
+        },
+        {
+          "name": "Mark paid (reactivate subscription)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions/{{transactionId}}/mark-paid","host":["{{baseUrl}}"],"path":["subscription-transactions","{{transactionId}}","mark-paid"]}
+          }
+        },
+        {
+          "name": "Refund → adds amount to user balance",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscription-transactions/{{transactionId}}/refund","host":["{{baseUrl}}"],"path":["subscription-transactions","{{transactionId}}","refund"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 — Lifecycle (cancel / expire / renew)",
+      "item": [
+        {
+          "name": "Cancel subscription (user — owner)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions/{{subscriptionId}}/cancel","host":["{{baseUrl}}"],"path":["subscriptions","{{subscriptionId}}","cancel"]}
           }
         },
         {
           "name": "Expire subscription (admin)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions/1/expire", "host": ["{{baseUrl}}"], "path": ["subscriptions","1","expire"] }
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions/{{subscriptionId}}/expire","host":["{{baseUrl}}"],"path":["subscriptions","{{subscriptionId}}","expire"]}
           }
         },
         {
-          "name": "Extend period (admin — PUT)",
+          "name": "Extend period PUT (admin)",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscriptions/1", "host": ["{{baseUrl}}"], "path": ["subscriptions","1"] },
-            "body": { "mode": "raw", "raw": "{\n  \"current_period_ends_at\": \"2027-01-01 00:00:00\"\n}" }
+            "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions/{{subscriptionId}}","host":["{{baseUrl}}"],"path":["subscriptions","{{subscriptionId}}"]},
+            "body": {"mode":"raw","raw":"{\n  \"current_period_ends_at\": \"2027-01-01 00:00:00\"\n}"}
+          }
+        },
+        {
+          "name": "Renew subscription (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/subscriptions/{{subscriptionId}}/renew","host":["{{baseUrl}}"],"path":["subscriptions","{{subscriptionId}}","renew"]}
           }
         }
       ]
     },
     {
-      "name": "Subscription Transactions",
+      "name": "07 — Cleanup (delete prices then plan, logout last)",
       "item": [
         {
-          "name": "List transactions (admin — all)",
+          "name": "Delete USD price (admin)",
           "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscription-transactions", "host": ["{{baseUrl}}"], "path": ["subscription-transactions"] }
+            "method": "DELETE",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plan-prices/{{usdPriceId}}","host":["{{baseUrl}}"],"path":["plan-prices","{{usdPriceId}}"]}
           }
         },
         {
-          "name": "List transactions (user — own only, max 10)",
+          "name": "Delete AED price (admin)",
           "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscription-transactions", "host": ["{{baseUrl}}"], "path": ["subscription-transactions"] }
+            "method": "DELETE",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plan-prices/{{aedPriceId}}","host":["{{baseUrl}}"],"path":["plan-prices","{{aedPriceId}}"]}
           }
         },
         {
-          "name": "Get transaction by ID",
+          "name": "Delete plan (admin)",
           "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscription-transactions/1", "host": ["{{baseUrl}}"], "path": ["subscription-transactions","1"] }
+            "method": "DELETE",
+            "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],
+            "url": {"raw":"{{baseUrl}}/plans/{{planId}}","host":["{{baseUrl}}"],"path":["plans","{{planId}}"]}
           }
         },
         {
-          "name": "Create transaction (admin)",
+          "name": "Logout (user)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscription-transactions", "host": ["{{baseUrl}}"], "path": ["subscription-transactions"] },
-            "body": { "mode": "raw", "raw": "{\n  \"subscription_id\": 1,\n  \"provider\": \"manual\"\n}" }
-          }
-        },
-        {
-          "name": "Mark paid — auto-activates subscription (admin)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscription-transactions/1/mark-paid", "host": ["{{baseUrl}}"], "path": ["subscription-transactions","1","mark-paid"] }
-          }
-        },
-        {
-          "name": "Mark failed — records failure reason (admin)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscription-transactions/1/mark-failed", "host": ["{{baseUrl}}"], "path": ["subscription-transactions","1","mark-failed"] },
-            "body": { "mode": "raw", "raw": "{\n  \"failure_reason\": \"Insufficient funds\"\n}" }
-          }
-        },
-        {
-          "name": "Refund — adds amount to user balance (admin)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/subscription-transactions/1/refund", "host": ["{{baseUrl}}"], "path": ["subscription-transactions","1","refund"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Cron Jobs (manual trigger)",
-      "item": [
-        {
-          "name": "Trigger: expire trials",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/debug/expire-trials", "host": ["{{baseUrl}}"], "path": ["debug","expire-trials"] }
-          }
-        },
-        {
-          "name": "Trigger: cancel overdue after grace period",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/debug/expire-overdue", "host": ["{{baseUrl}}"], "path": ["debug","expire-overdue"] }
-          }
-        },
-        {
-          "name": "Trigger: auto-renew active subscriptions",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/debug/auto-renew", "host": ["{{baseUrl}}"], "path": ["debug","auto-renew"] }
+            "header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],
+            "url": {"raw":"{{baseUrl}}/auth/logout","host":["{{baseUrl}}"],"path":["auth","logout"]}
           }
         }
       ]
