@@ -2,6 +2,8 @@
 
 How to run the Subscription Lifecycle Engine on a local machine or production server.
 
+> **Note:** The database schema uses raw SQL migration files located in `database/migrations/`. Run them manually as shown below — do not use `php artisan migrate`.
+
 ---
 
 ## Local Development (Docker + PHP)
@@ -10,7 +12,7 @@ How to run the Subscription Lifecycle Engine on a local machine or production se
 
 ```bash
 git clone https://github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine.git
-cd -Subscription_Lifecycle_Engine
+cd ~/-Subscription_Lifecycle_Engine
 
 cp .env.example .env
 ```
@@ -36,10 +38,18 @@ This starts MySQL on port `3306` with:
 
 Wait ~5 seconds for MySQL to be ready.
 
-### Step 4 — Run migrations and seed
+### Step 4 — Run SQL migrations and seed
 
 ```bash
-php artisan migrate --seed
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/users_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/personal_access_tokens_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/plans_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/plan_prices_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/subscriptions_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/subscription_transactions_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/add_is_admin_to_users_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/add_balance_to_users_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/seeders/create_default_admin_2026_05_4.sql
 ```
 
 This creates all tables and seeds:
@@ -57,19 +67,28 @@ Server runs at: `http://127.0.0.1:8000`
 
 ## Production Server (Ubuntu / Nginx)
 
-### Step 1 — Install dependencies
+### Step 1 — Install PHP and dependencies
 
 ```bash
 sudo apt update
-sudo apt install php8.2 php8.2-fpm php8.2-mysql php8.2-mbstring php8.2-xml php8.2-curl nginx mysql-server composer -y
+sudo apt install -y php8.4 php8.4-fpm php8.4-mysql php8.4-mbstring php8.4-xml php8.4-curl php8.4-zip php8.4-bcmath nginx mysql-server
+curl -sS https://getcomposer.org/installer | php
+sudo mv composer.phar /usr/local/bin/composer
 ```
 
-### Step 2 — Clone and configure
+### Step 2 — Setup MySQL
+
+```bash
+sudo systemctl start mysql
+sudo mysql -e "CREATE DATABASE subscription_engine; CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'app_password'; GRANT ALL PRIVILEGES ON subscription_engine.* TO 'app_user'@'localhost'; FLUSH PRIVILEGES;"
+```
+
+### Step 3 — Clone and configure
 
 ```bash
 cd /var/www
 git clone https://github.com/MohamedAbuZamil/-Subscription_Lifecycle_Engine.git
-cd -Subscription_Lifecycle_Engine
+cd /var/www/-Subscription_Lifecycle_Engine
 
 cp .env.example .env
 ```
@@ -78,31 +97,49 @@ Edit `.env`:
 ```
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://yourdomain.com
+APP_URL=http://92.222.226.72
 
 DB_HOST=127.0.0.1
 DB_DATABASE=subscription_engine
-DB_USERNAME=your_db_user
-DB_PASSWORD=your_db_password
+DB_USERNAME=app_user
+DB_PASSWORD=app_password
 ```
 
-### Step 3 — Install and setup
+### Step 4 — Install and run migrations
 
 ```bash
 composer install --no-dev --optimize-autoloader
 php artisan key:generate
-php artisan migrate --force
+
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/users_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/personal_access_tokens_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/plans_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/plan_prices_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/subscriptions_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/subscription_transactions_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/add_is_admin_to_users_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/migrations/add_balance_to_users_2026_05_4.sql
+mysql -u app_user -p'app_password' subscription_engine < database/seeders/create_default_admin_2026_05_4.sql
+
 php artisan config:cache
 php artisan route:cache
 ```
 
-### Step 4 — Nginx config
+### Step 5 — Quick serve (for testing)
+
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+API accessible at: `http://92.222.226.72:8000/api`
+
+### Step 6 — Nginx config (for production)
 
 ```nginx
 server {
     listen 80;
-    server_name yourdomain.com;
-    root /var/www/subscription-lifecycle-engine/public;
+    server_name 92.222.226.72;
+    root /var/www/-Subscription_Lifecycle_Engine/public;
 
     index index.php;
 
@@ -111,7 +148,7 @@ server {
     }
 
     location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_pass unix:/var/run/php/php8.4-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
     }
@@ -119,17 +156,18 @@ server {
 ```
 
 ```bash
-sudo nginx -t && sudo systemctl reload nginx
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-### Step 5 — Set permissions
+### Step 7 — Set permissions
 
 ```bash
-sudo chown -R www-data:www-data /var/www/subscription-lifecycle-engine
+sudo chown -R www-data:www-data /var/www/-Subscription_Lifecycle_Engine
 sudo chmod -R 775 storage bootstrap/cache
 ```
 
-### Step 6 — Setup Cron
+### Step 8 — Setup Cron
 
 ```bash
 crontab -e
@@ -137,7 +175,7 @@ crontab -e
 
 Add:
 ```
-* * * * * cd /var/www/subscription-lifecycle-engine && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/-Subscription_Lifecycle_Engine && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 ---
