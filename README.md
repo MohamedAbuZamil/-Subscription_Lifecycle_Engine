@@ -93,7 +93,7 @@ active   ──(period ends, auto_renewal=true, balance ok)→ active (renewed)
 active   ──(period ends, auto_renewal=true, no balance)→ past_due
 active   ──(cancel by user)──────────────────────────→ canceled
 active   ──(markPastDue by admin)────────────────────→ past_due
-past_due ──(grace period passes, cron 00:10)─────────→ expired
+past_due ──(grace period passes, cron 00:10)─────────→ canceled
 canceled ──(expire by admin)─────────────────────────→ expired
 ```
 

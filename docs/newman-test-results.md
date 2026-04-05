@@ -5,19 +5,19 @@
 The Postman collection (`tests/postman-collection.json`) was executed via **Newman CLI** against a live **OVH Ubuntu server** on **April 5, 2026**.
 
 ```
-Total requests   : 42
+Total requests   : 36
 Failed requests  : 0
-Test scripts     : 10 executed, 0 failed
-Pre-request scripts: 42 executed, 0 failed
+Test scripts     : 9 executed, 0 failed
+Pre-request scripts: 37 executed, 0 failed
 Assertions       : 0 failed
-Total duration   : 14.4s
-Average response : 36ms  (min: 20ms, max: 258ms)
-Data received    : 22.37 kB
+Total duration   : 13.1s
+Average response : 38ms  (min: 15ms, max: 247ms)
+Data received    : 15.13 kB
 ```
 
-**Result: PASS — all 42 requests completed with expected HTTP status codes.**
+**Result: PASS — all 36 requests completed with expected HTTP status codes.**
 
-The full raw output is saved in `newman-results.txt` at the project root.
+The database is reset before each run using `php artisan test:reset` to guarantee a clean state.
 
 ---
 
@@ -32,10 +32,9 @@ The collection covers the full subscription lifecycle end-to-end, split into 7 s
 | Request | Status | Notes |
 |---|---|---|
 | Login admin → adminToken saved | **200 OK** | `adminToken` extracted and stored for all subsequent admin requests |
-| Register user → userToken saved | **422** | Email already taken on re-run — expected. Fallback login runs automatically |
-| Login user (fallback) | **200 OK** | `userToken` extracted and stored |
+| Register user → userToken saved | **201 Created** | Fresh user created — DB is reset before each run |
 
-**Key behaviour:** The collection is idempotent — if the user already exists, it logs in instead of failing.
+**Key behaviour:** The collection runs on a clean database (reset via `php artisan test:reset`). No fallback scripts are needed.
 
 ---
 
@@ -43,13 +42,11 @@ The collection covers the full subscription lifecycle end-to-end, split into 7 s
 
 | Request | Status | Notes |
 |---|---|---|
-| Create plan → planId saved | **422** | Code `basic` already taken — expected on re-run. Fallback fetches existing `planId` |
+| Create plan → planId saved | **201 Created** | Plan created successfully on clean DB |
 | List plans (admin) | **200 OK** | Returns paginated plan list |
 | Get plan by ID | **200 OK** | Returns single plan by stored `planId` |
 | Update plan PATCH | **200 OK** | Partial update — sets `is_active: true` |
 | Replace plan PUT | **200 OK** | Full replace — all fields sent |
-
-**Key behaviour:** The fallback GET after a 422 ensures `planId` is always set before proceeding to plan-prices.
 
 ---
 
@@ -57,10 +54,10 @@ The collection covers the full subscription lifecycle end-to-end, split into 7 s
 
 | Request | Status | Notes |
 |---|---|---|
-| Create USD monthly price → usdPriceId saved | **409 Conflict** | Price already exists for this plan+cycle+currency — expected. Fallback fetches `usdPriceId` |
-| Create AED monthly price → aedPriceId saved | **201 Created** | New price created successfully (each run creates a new AED record since the previous one gets deleted in cleanup) |
-| Create EGP monthly price | **409 Conflict** | Already exists — expected, no fallback needed here |
-| Create USD yearly price | **409 Conflict** | Already exists — expected |
+| Create USD monthly price → usdPriceId saved | **201 Created** | Price created on clean DB |
+| Create AED monthly price → aedPriceId saved | **201 Created** | AED price created successfully |
+| Create EGP monthly price | **201 Created** | EGP price created successfully |
+| Create USD yearly price | **201 Created** | Yearly price created successfully |
 | List plan prices | **200 OK** | Returns all 4 prices for the plan |
 | Get price by ID | **200 OK** | Single price by stored `usdPriceId` |
 | Update USD price PATCH | **200 OK** | Sets price to 11.99 |
@@ -73,12 +70,12 @@ The collection covers the full subscription lifecycle end-to-end, split into 7 s
 
 | Request | Status | Notes |
 |---|---|---|
-| Create subscription → subscriptionId saved | **201 Created** | User subscribes to Basic Plan (monthly). `plan_price_id` is auto-resolved from IP + billing_cycle |
+| Create subscription → subscriptionId saved | **201 Created** | User subscribes to Basic Plan (monthly). Status is `trialing` — first-time user on clean DB |
 | List subscriptions (admin — all) | **200 OK** | Admin sees all subscriptions across all users |
 | List subscriptions (user — own only) | **200 OK** | User sees only their own subscriptions (max 10 per page) |
 | Get subscription by ID | **200 OK** | Verifies `subscriptionId` is accessible by the owning user |
 
-**Subscription created with status `pending`** because the user already had a trial on a previous run (one free trial per user across all plans).
+**Subscription created with status `trialing`** — fresh user on a clean DB qualifies for the 14-day trial.
 
 ---
 
@@ -109,9 +106,7 @@ The collection covers the full subscription lifecycle end-to-end, split into 7 s
 | Cancel subscription (user — owner) | **200 OK** | User cancels own subscription; status → `canceled` |
 | Expire subscription (admin) | **200 OK** | Admin expires a canceled subscription; status → `expired` |
 | Extend period PUT (admin) | **200 OK** | Admin sets `current_period_ends_at` to `2027-01-01`; only this field is writable |
-| Renew subscription (admin) | **422** | Correct — subscription is `expired` at this point; only `active` subscriptions can be renewed |
-
-**Note on Renew 422:** This is the expected business logic response. The subscription was expired before `renew` was called, so the API correctly rejects it.
+| Renew subscription (admin) | **200 OK** | Admin renews the `expired` subscription — status returns to `active`, new billing period set |
 
 ---
 
@@ -131,7 +126,7 @@ The collection covers the full subscription lifecycle end-to-end, split into 7 s
 ## Subscription Lifecycle Demonstrated
 
 ```
-pending
+trialing
   └─ markPaid ──────────────────────────────→ active
        └─ markPastDue ──────────────────────→ past_due
             ├─ markFailed (retry 1) ─────────→ past_due (no change)
@@ -139,6 +134,7 @@ pending
                  └─ refund ──────────────────→ active (balance restored)
                       └─ cancel (by user) ───→ canceled
                            └─ expire (admin)─→ expired
+                                └─ renew (admin) ──→ active
 ```
 
 ---
@@ -155,3 +151,4 @@ pending
 | Newman version | CLI (latest) |
 | Request delay | 300ms between requests |
 | Run date | 2026-04-05 |
+| DB reset | `php artisan test:reset` before each run |

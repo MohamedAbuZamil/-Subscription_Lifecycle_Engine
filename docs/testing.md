@@ -10,19 +10,19 @@ How to test the Subscription Lifecycle Engine API — either via **Newman CLI** 
 
 The full Postman collection (`tests/postman-collection.json`) was executed via **Newman CLI** against a live **OVH Ubuntu server** running the API.
 
-All **42 requests** completed successfully with **0 failures**:
+All **36 requests** completed successfully with **0 failures**:
 
 | Section | Requests | Result |
 |---|---|---|
-| 01 — Auth (register / login / logout) | 3 | ✅ |
-| 02 — Plans (CRUD + PATCH + PUT) | 5 | ✅ |
-| 03 — Plan Prices (create / list / get / patch) | 6 | ✅ |
-| 04 — Subscriptions (create / list / get) | 3 | ✅ |
-| 05 — Transactions (create / mark-paid / mark-failed / refund) | 9 | ✅ |
+| 01 — Auth (login admin / register user) | 2 | ✅ |
+| 02 — Plans (create / list / get / patch / put) | 5 | ✅ |
+| 03 — Plan Prices (create ×4 / list / get / patch) | 7 | ✅ |
+| 04 — Subscriptions (create / list ×2 / get) | 4 | ✅ |
+| 05 — Transactions (create / list ×2 / get / mark-paid / verify / mark-past-due / verify / create×2 / mark-failed / mark-paid / refund) | 13 | ✅ |
 | 06 — Lifecycle (cancel / expire / extend / renew) | 4 | ✅ |
-| 07 — Cleanup (delete prices / plan / logout) | 4 | ✅ |
+| 07 — Logout | 1 | ✅ |
 
-The full output is saved in `newman-results.txt` at the project root on the server.
+The database is reset before each run using `php artisan test:reset`.
 
 ---
 
@@ -40,11 +40,13 @@ The full output is saved in `newman-results.txt` at the project root on the serv
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-#### 2. Clear rate-limit cache (important on repeated runs)
+#### 2. Reset the database (required before each run)
 
 ```bash
-php artisan cache:clear
+php artisan test:reset
 ```
+
+This wipes all test data and re-seeds the admin user, guaranteeing a clean state.
 
 #### 3. Run Newman
 
@@ -55,8 +57,6 @@ newman run tests/postman-collection.json \
   --verbose \
   2>&1 | tee newman-results.txt
 ```
-
-The collection handles **re-runs automatically** — if a plan, price, or user already exists, it falls back to fetching the existing record instead of failing.
 
 ---
 
