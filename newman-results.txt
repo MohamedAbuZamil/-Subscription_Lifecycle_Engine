@@ -1,0 +1,934 @@
+newman
+
+Subscription Lifecycle Engine
+
+❏ 01 — Auth
+↳ Login admin → adminToken saved
+  POST http://127.0.0.1:8000/api/auth/login  
+  200 OK ★ 246ms time ★ 364B↑ 450B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 58B
+  │ {
+  │   "email": "admin@admin.com",
+  │   "password": "admin123"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 120B
+  │ {"data":{"id":1,"name":"admin","email":"admin@admin.co
+  │ m"},"token":"11|ifXR3ciwCLHs57HMadfCFqSpUUFx0OZPanKXTl
+  │ RK8014c0d3"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  9ms       4ms    (cache)      883µs           223ms            17ms       1ms       256ms 
+
+
+↳ Register user → userToken saved
+  POST http://127.0.0.1:8000/api/auth/register  
+  422 Unprocessable Content ★ 22ms time ★ 438B↑ 453B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 128B
+  │ {
+  │   "name": "Ahmed Ali",
+  │   "email": "ahmed@example.com",
+  │   "password": "password123",
+  │   "password_confirmation": "password123"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 104B
+  │ {"message":"The email has already been taken.","errors
+  │ ":{"email":["The email has already been taken."]}}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       1ms    (cache)      540µs           16ms             2ms        101µs     22ms  
+
+
+↳ Login user (fallback if already registered)
+  POST http://127.0.0.1:8000/api/auth/login  
+  200 OK ★ 258ms time ★ 369B↑ 456B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 63B
+  │ {
+  │   "email": "ahmed@example.com",
+  │   "password": "password123"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 126B
+  │ {"data":{"id":2,"name":"Ahmed Ali","email":"ahmed@exam
+  │ ple.com"},"token":"12|0lqiwkPkognxPVGAAQjhY093GXBnBAZ8
+  │ xlde393jd33a736f"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       1ms    (cache)      737µs           253ms            1ms        60µs      259ms 
+
+
+❏ 02 — Plans
+↳ Create plan → planId saved
+  POST http://127.0.0.1:8000/api/plans  
+  422 Unprocessable Content ★ 28ms time ★ 511B↑ 450B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 134B
+  │ {
+  │   "code": "basic",
+  │   "name": "Basic Plan",
+  │   "description": "Entry-level plan with trial",
+  │   "trial_days": 14,
+  │   "is_active": true
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 101B
+  │ {"message":"The code has already been taken.","errors"
+  │ :{"code":["The code has already been taken."]}}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       1ms    (cache)      253µs           24ms             2ms        92µs      28ms  
+
+  GET http://127.0.0.1:8000/api/plans  
+  200 OK ★ 24ms time ★ 323B↑ 1.04kB↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 709B
+  │ {"data":[{"id":2,"code":"basic","name":"Basic Plan","d
+  │ escription":"Entry-level plan with trial","trial_days"
+  │ :14,"is_active":true,"created_at":"2026-04-05T20:47:04
+  │ .000000Z","updated_at":"2026-04-05T20:47:04.000000Z"}]
+  │ ,"links":{"first":"http:\/\/127.0.0.1:8000\/api\/plans
+  │ ?page=1","last":"http:\/\/127.0.0.1:8000\/api\/plans?p
+  │ age=1","prev":null,"next":null},"meta":{"current_page"
+  │ :1,"from":1,"last_page":1,"links":[{"url":null,"label"
+  │ :"&laquo; Previous","page":null,"active":false},{"url"
+  │ :"http:\/\/127.0.0.1:8000\/api\/plans?page=1","label":
+  │ "1","page":1,"active":true},{"url":null,"label":"Next 
+  │ &raquo;","page":null,"active":false}],"path":"http:\/\
+  │ /127.0.0.1:8000\/api\/plans","per_page":15,"to":1,"tot
+  │ al":1}}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       1ms    (cache)      177µs           20ms             1ms        143µs     24ms  
+
+
+↳ List plans (admin)
+  GET http://127.0.0.1:8000/api/plans  
+  200 OK ★ 24ms time ★ 323B↑ 1.04kB↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 709B
+  │ {"data":[{"id":2,"code":"basic","name":"Basic Plan","d
+  │ escription":"Entry-level plan with trial","trial_days"
+  │ :14,"is_active":true,"created_at":"2026-04-05T20:47:04
+  │ .000000Z","updated_at":"2026-04-05T20:47:04.000000Z"}]
+  │ ,"links":{"first":"http:\/\/127.0.0.1:8000\/api\/plans
+  │ ?page=1","last":"http:\/\/127.0.0.1:8000\/api\/plans?p
+  │ age=1","prev":null,"next":null},"meta":{"current_page"
+  │ :1,"from":1,"last_page":1,"links":[{"url":null,"label"
+  │ :"&laquo; Previous","page":null,"active":false},{"url"
+  │ :"http:\/\/127.0.0.1:8000\/api\/plans?page=1","label":
+  │ "1","page":1,"active":true},{"url":null,"label":"Next 
+  │ &raquo;","page":null,"active":false}],"path":"http:\/\
+  │ /127.0.0.1:8000\/api\/plans","per_page":15,"to":1,"tot
+  │ al":1}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  466µs     421µs   (cache)      89µs            21ms             1ms        114µs     23ms  
+
+
+↳ Get plan by ID (admin)
+  GET http://127.0.0.1:8000/api/plans/2  
+  200 OK ★ 22ms time ★ 325B↑ 545B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 215B
+  │ {"data":{"id":2,"code":"basic","name":"Basic Plan","de
+  │ scription":"Entry-level plan with trial","trial_days":
+  │ 14,"is_active":true,"created_at":"2026-04-05T20:47:04.
+  │ 000000Z","updated_at":"2026-04-05T20:47:04.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  850µs     989µs   (cache)      160µs           18ms             1ms        84µs      22ms  
+
+
+↳ Update plan PATCH (admin)
+  PATCH http://127.0.0.1:8000/api/plans/2  
+  200 OK ★ 42ms time ★ 402B↑ 545B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 23B
+  │ {
+  │   "is_active": true
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 215B
+  │ {"data":{"id":2,"code":"basic","name":"Basic Plan","de
+  │ scription":"Entry-level plan with trial","trial_days":
+  │ 14,"is_active":true,"created_at":"2026-04-05T20:47:04.
+  │ 000000Z","updated_at":"2026-04-05T20:47:04.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  529µs     613µs   (cache)      177µs           38ms             2ms        86µs      42ms  
+
+
+↳ Replace plan PUT (admin)
+  PUT http://127.0.0.1:8000/api/plans/2  
+  200 OK ★ 25ms time ★ 512B↑ 545B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 134B
+  │ {
+  │   "code": "basic",
+  │   "name": "Basic Plan",
+  │   "description": "Entry-level plan with trial",
+  │   "trial_days": 14,
+  │   "is_active": true
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 215B
+  │ {"data":{"id":2,"code":"basic","name":"Basic Plan","de
+  │ scription":"Entry-level plan with trial","trial_days":
+  │ 14,"is_active":true,"created_at":"2026-04-05T20:47:04.
+  │ 000000Z","updated_at":"2026-04-05T20:47:04.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  663µs     571µs   (cache)      193µs           22ms             1ms        78µs      25ms  
+
+
+❏ 03 — Plan Prices
+↳ Create USD monthly price → usdPriceId saved
+  POST http://127.0.0.1:8000/api/plan-prices  
+  409 Conflict ★ 29ms time ★ 516B↑ 416B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 133B
+  │ {
+  │   "plan_id": 2,
+  │   "billing_cycle": "monthly",
+  │   "currency": "USD",
+  │   "price": 9.99,
+  │   "grace_period_days": 3,
+  │   "is_active": true
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 80B
+  │ {"message":"A price for this plan, billing cycle, and 
+  │ currency already exists."}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       1ms    (cache)      246µs           24ms             2ms        92µs      29ms  
+
+  GET http://127.0.0.1:8000/api/plan-prices  
+  200 OK ★ 23ms time ★ 329B↑ 1.55kB↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 1.22kB
+  │ {"data":[{"id":3,"plan_id":2,"billing_cycle":"monthly"
+  │ ,"currency":"EGP","price":"299.00","grace_period_days"
+  │ :3,"is_active":true,"external_price_id":null,"created_
+  │ at":"2026-04-05T20:47:07.000000Z","updated_at":"2026-0
+  │ 4-05T20:47:07.000000Z"},{"id":4,"plan_id":2,"billing_c
+  │ ycle":"yearly","currency":"USD","price":"99.99","grace
+  │ _period_days":3,"is_active":true,"external_price_id":n
+  │ ull,"created_at":"2026-04-05T20:47:07.000000Z","update
+  │ d_at":"2026-04-05T20:47:07.000000Z"},{"id":5,"plan_id"
+  │ :2,"billing_cycle":"monthly","currency":"USD","price":
+  │ "11.99","grace_period_days":3,"is_active":true,"extern
+  │ al_price_id":null,"created_at":"2026-04-05T20:53:53.00
+  │ 0000Z","updated_at":"2026-04-05T20:53:55.000000Z"}],"l
+  │ inks":{"first":"http:\/\/127.0.0.1:8000\/api\/plan-pri
+  │ ces?page=1","last":"http:\/\/127.0.0.1:8000\/api\/plan
+  │ -prices?page=1","prev":null,"next":null},"meta":{"curr
+  │ ent_page":1,"from":1,"last_page":1,"links":[{"url":nul
+  │ l,"label":"&laquo; Previous","page":null,"active":fals
+  │ e},{"url":"http:\/\/127.0.0.1:8000\/api\/plan-prices?p
+  │ age=1","label":"1","page":1,"active":true},{"url":null
+  │ ,"label":"Next &raquo;","page":null,"active":false}],"
+  │ path":"http:\/\/127.0.0.1:8000\/api\/plan-prices","per
+  │ _page":15,"to":3,"total":3}}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       1ms    (cache)      244µs           19ms             1ms        170µs     24ms  
+
+
+↳ Create AED monthly price → aedPriceId saved
+  POST http://127.0.0.1:8000/api/plan-prices  
+  201 Created ★ 29ms time ★ 517B↑ 573B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 134B
+  │ {
+  │   "plan_id": 2,
+  │   "billing_cycle": "monthly",
+  │   "currency": "AED",
+  │   "price": 36.99,
+  │   "grace_period_days": 3,
+  │   "is_active": true
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 238B
+  │ {"data":{"id":9,"plan_id":2,"billing_cycle":"monthly",
+  │ "currency":"AED","price":"36.99","grace_period_days":3
+  │ ,"is_active":true,"external_price_id":null,"created_at
+  │ ":"2026-04-05T21:01:17.000000Z","updated_at":"2026-04-
+  │ 05T21:01:17.000000Z"}}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       1ms    (cache)      168µs           25ms             1ms        116µs     29ms  
+
+
+↳ Create EGP monthly price (admin)
+  POST http://127.0.0.1:8000/api/plan-prices  
+  409 Conflict ★ 27ms time ★ 518B↑ 416B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 135B
+  │ {
+  │   "plan_id": 2,
+  │   "billing_cycle": "monthly",
+  │   "currency": "EGP",
+  │   "price": 299.00,
+  │   "grace_period_days": 3,
+  │   "is_active": true
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 80B
+  │ {"message":"A price for this plan, billing cycle, and 
+  │ currency already exists."}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  897µs     1ms    (cache)      214µs           23ms             1ms        69µs      27ms  
+
+
+↳ Create USD yearly price (admin)
+  POST http://127.0.0.1:8000/api/plan-prices  
+  409 Conflict ★ 31ms time ★ 516B↑ 416B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 133B
+  │ {
+  │   "plan_id": 2,
+  │   "billing_cycle": "yearly",
+  │   "currency": "USD",
+  │   "price": 99.99,
+  │   "grace_period_days": 3,
+  │   "is_active": true
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 80B
+  │ {"message":"A price for this plan, billing cycle, and 
+  │ currency already exists."}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  855µs     1ms    (cache)      348µs           26ms             1ms        64µs      31ms  
+
+
+↳ List plan prices (admin)
+  GET http://127.0.0.1:8000/api/plan-prices  
+  200 OK ★ 23ms time ★ 329B↑ 1.78kB↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 1.45kB
+  │ {"data":[{"id":3,"plan_id":2,"billing_cycle":"monthly"
+  │ ,"currency":"EGP","price":"299.00","grace_period_days"
+  │ :3,"is_active":true,"external_price_id":null,"created_
+  │ at":"2026-04-05T20:47:07.000000Z","updated_at":"2026-0
+  │ 4-05T20:47:07.000000Z"},{"id":4,"plan_id":2,"billing_c
+  │ ycle":"yearly","currency":"USD","price":"99.99","grace
+  │ _period_days":3,"is_active":true,"external_price_id":n
+  │ ull,"created_at":"2026-04-05T20:47:07.000000Z","update
+  │ d_at":"2026-04-05T20:47:07.000000Z"},{"id":5,"plan_id"
+  │ :2,"billing_cycle":"monthly","currency":"USD","price":
+  │ "11.99","grace_period_days":3,"is_active":true,"extern
+  │ al_price_id":null,"created_at":"2026-04-05T20:53:53.00
+  │ 0000Z","updated_at":"2026-04-05T20:53:55.000000Z"},{"i
+  │ d":9,"plan_id":2,"billing_cycle":"monthly","currency":
+  │ "AED","price":"36.99","grace_period_days":3,"is_active
+  │ ":true,"external_price_id":null,"created_at":"2026-04-
+  │ 05T21:01:17.000000Z","updated_at":"2026-04-05T21:01:17
+  │ .000000Z"}],"links":{"first":"http:\/\/127.0.0.1:8000\
+  │ /api\/plan-prices?page=1","last":"http:\/\/127.0.0.1:8
+  │ 000\/api\/plan-prices?page=1","prev":null,"next":null}
+  │ ,"meta":{"current_page":1,"from":1,"last_page":1,"link
+  │ s":[{"url":null,"label":"&laquo; Previous","page":null
+  │ ,"active":false},{"url":"http:\/\/127.0.0.1:8000\/api\
+  │ /plan-prices?page=1","label":"1","page":1,"active":tru
+  │ e},{"url":null,"label":"Next &raquo;","page":null,"act
+  │ ive":false}],"path":"http:\/\/127.0.0.1:8000\/api\/pla
+  │ n-prices","per_page":15,"to":4,"total":4}}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  780µs     1ms    (cache)      192µs           19ms             1ms        96µs      23ms  
+
+
+↳ Get price by ID (admin)
+  GET http://127.0.0.1:8000/api/plan-prices/5  
+  200 OK ★ 21ms time ★ 331B↑ 568B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 238B
+  │ {"data":{"id":5,"plan_id":2,"billing_cycle":"monthly",
+  │ "currency":"USD","price":"11.99","grace_period_days":3
+  │ ,"is_active":true,"external_price_id":null,"created_at
+  │ ":"2026-04-05T20:53:53.000000Z","updated_at":"2026-04-
+  │ 05T20:53:55.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  784µs     950µs   (cache)      194µs           18ms             1ms        69µs      21ms  
+
+
+↳ Update USD price PATCH (admin)
+  PATCH http://127.0.0.1:8000/api/plan-prices/5  
+  200 OK ★ 29ms time ★ 405B↑ 568B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 20B
+  │ {
+  │   "price": 11.99
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 238B
+  │ {"data":{"id":5,"plan_id":2,"billing_cycle":"monthly",
+  │ "currency":"USD","price":"11.99","grace_period_days":3
+  │ ,"is_active":true,"external_price_id":null,"created_at
+  │ ":"2026-04-05T20:53:53.000000Z","updated_at":"2026-04-
+  │ 05T20:53:55.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  825µs     821µs   (cache)      161µs           26ms             1ms        47µs      29ms  
+
+
+❏ 04 — Subscriptions
+↳ Create subscription — user USD (trialing) → subscriptionId saved
+  POST http://127.0.0.1:8000/api/subscriptions  
+  201 Created ★ 34ms time ★ 432B↑ 713B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 48B
+  │ {
+  │   "plan_id": 2,
+  │   "billing_cycle": "monthly"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 378B
+  │ {"data":{"id":3,"user_id":2,"plan_id":2,"plan_price_id
+  │ ":5,"status":"pending","started_at":"2026-04-05T21:01:
+  │ 19.000000Z","trial_starts_at":null,"trial_ends_at":nul
+  │ l,"current_period_starts_at":null,"current_period_ends
+  │ _at":null,"grace_period_ends_at":null,"canceled_at":nu
+  │ ll,"expires_at":null,"created_at":"2026-04-05T21:01:19
+  │ .000000Z","updated_at":"2026-04-05T21:01:19.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  933µs     842µs   (cache)      149µs           32ms             879µs      28µs      34ms  
+
+
+↳ List subscriptions (admin — all)
+  GET http://127.0.0.1:8000/api/subscriptions  
+  200 OK ★ 24ms time ★ 331B↑ 2.22kB↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 1.89kB
+  │ {"data":[{"id":3,"user_id":2,"plan_id":2,"plan_price_i
+  │ d":5,"status":"pending","started_at":"2026-04-05T21:01
+  │ :19.000000Z","trial_starts_at":null,"trial_ends_at":nu
+  │ ll,"current_period_starts_at":null,"current_period_end
+  │ s_at":null,"grace_period_ends_at":null,"canceled_at":n
+  │ ull,"expires_at":null,"created_at":"2026-04-05T21:01:1
+  │ 9.000000Z","updated_at":"2026-04-05T21:01:19.000000Z"}
+  │ ,{"id":2,"user_id":2,"plan_id":2,"plan_price_id":5,"st
+  │ atus":"expired","started_at":"2026-04-05T20:58:07.0000
+  │ 00Z","trial_starts_at":null,"trial_ends_at":null,"curr
+  │ ent_period_starts_at":"2026-04-05T20:58:12.000000Z","c
+  │ urrent_period_ends_at":"2027-01-01T00:00:00.000000Z","
+  │ grace_period_ends_at":null,"canceled_at":"2026-04-05T2
+  │ 0:58:13.000000Z","expires_at":"2026-04-05T20:58:13.000
+  │ 000Z","created_at":"2026-04-05T20:58:07.000000Z","upda
+  │ ted_at":"2026-04-05T20:58:13.000000Z"},{"id":1,"user_i
+  │ d":2,"plan_id":2,"plan_price_id":5,"status":"expired",
+  │ "started_at":"2026-04-05T20:53:55.000000Z","trial_star
+  │ ts_at":"2026-04-05T20:53:55.000000Z","trial_ends_at":"
+  │ 2026-04-05T20:53:58.000000Z","current_period_starts_at
+  │ ":"2026-04-05T20:54:01.000000Z","current_period_ends_a
+  │ t":"2027-01-01T00:00:00.000000Z","grace_period_ends_at
+  │ ":null,"canceled_at":"2026-04-05T20:54:01.000000Z","ex
+  │ pires_at":"2026-04-05T20:54:02.000000Z","created_at":"
+  │ 2026-04-05T20:53:55.000000Z","updated_at":"2026-04-05T
+  │ 20:54:02.000000Z"}],"links":{"first":"http:\/\/127.0.0
+  │ .1:8000\/api\/subscriptions?page=1","last":"http:\/\/1
+  │ 27.0.0.1:8000\/api\/subscriptions?page=1","prev":null,
+  │ "next":null},"meta":{"current_page":1,"from":1,"last_p
+  │ age":1,"links":[{"url":null,"label":"&laquo; Previous"
+  │ ,"page":null,"active":false},{"url":"http:\/\/127.0.0.
+  │ 1:8000\/api\/subscriptions?page=1","label":"1","page":
+  │ 1,"active":true},{"url":null,"label":"Next &raquo;","p
+  │ age":null,"active":false}],"path":"http:\/\/127.0.0.1:
+  │ 8000\/api\/subscriptions","per_page":15,"to":3,"total"
+  │ :3}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  670µs     633µs   (cache)      105µs           21ms             676µs      27µs      24ms  
+
+
+↳ List subscriptions (user — own only)
+  GET http://127.0.0.1:8000/api/subscriptions  
+  200 OK ★ 24ms time ★ 331B↑ 2.22kB↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 1.89kB
+  │ {"data":[{"id":3,"user_id":2,"plan_id":2,"plan_price_i
+  │ d":5,"status":"pending","started_at":"2026-04-05T21:01
+  │ :19.000000Z","trial_starts_at":null,"trial_ends_at":nu
+  │ ll,"current_period_starts_at":null,"current_period_end
+  │ s_at":null,"grace_period_ends_at":null,"canceled_at":n
+  │ ull,"expires_at":null,"created_at":"2026-04-05T21:01:1
+  │ 9.000000Z","updated_at":"2026-04-05T21:01:19.000000Z"}
+  │ ,{"id":2,"user_id":2,"plan_id":2,"plan_price_id":5,"st
+  │ atus":"expired","started_at":"2026-04-05T20:58:07.0000
+  │ 00Z","trial_starts_at":null,"trial_ends_at":null,"curr
+  │ ent_period_starts_at":"2026-04-05T20:58:12.000000Z","c
+  │ urrent_period_ends_at":"2027-01-01T00:00:00.000000Z","
+  │ grace_period_ends_at":null,"canceled_at":"2026-04-05T2
+  │ 0:58:13.000000Z","expires_at":"2026-04-05T20:58:13.000
+  │ 000Z","created_at":"2026-04-05T20:58:07.000000Z","upda
+  │ ted_at":"2026-04-05T20:58:13.000000Z"},{"id":1,"user_i
+  │ d":2,"plan_id":2,"plan_price_id":5,"status":"expired",
+  │ "started_at":"2026-04-05T20:53:55.000000Z","trial_star
+  │ ts_at":"2026-04-05T20:53:55.000000Z","trial_ends_at":"
+  │ 2026-04-05T20:53:58.000000Z","current_period_starts_at
+  │ ":"2026-04-05T20:54:01.000000Z","current_period_ends_a
+  │ t":"2027-01-01T00:00:00.000000Z","grace_period_ends_at
+  │ ":null,"canceled_at":"2026-04-05T20:54:01.000000Z","ex
+  │ pires_at":"2026-04-05T20:54:02.000000Z","created_at":"
+  │ 2026-04-05T20:53:55.000000Z","updated_at":"2026-04-05T
+  │ 20:54:02.000000Z"}],"links":{"first":"http:\/\/127.0.0
+  │ .1:8000\/api\/subscriptions?page=1","last":"http:\/\/1
+  │ 27.0.0.1:8000\/api\/subscriptions?page=1","prev":null,
+  │ "next":null},"meta":{"current_page":1,"from":1,"last_p
+  │ age":1,"links":[{"url":null,"label":"&laquo; Previous"
+  │ ,"page":null,"active":false},{"url":"http:\/\/127.0.0.
+  │ 1:8000\/api\/subscriptions?page=1","label":"1","page":
+  │ 1,"active":true},{"url":null,"label":"Next &raquo;","p
+  │ age":null,"active":false}],"path":"http:\/\/127.0.0.1:
+  │ 8000\/api\/subscriptions","per_page":10,"to":3,"total"
+  │ :3}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  388µs     428µs   (cache)      84µs            22ms             778µs      32µs      24ms  
+
+
+↳ Get subscription by ID (user)
+  GET http://127.0.0.1:8000/api/subscriptions/3  
+  200 OK ★ 20ms time ★ 333B↑ 708B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 378B
+  │ {"data":{"id":3,"user_id":2,"plan_id":2,"plan_price_id
+  │ ":5,"status":"pending","started_at":"2026-04-05T21:01:
+  │ 19.000000Z","trial_starts_at":null,"trial_ends_at":nul
+  │ l,"current_period_starts_at":null,"current_period_ends
+  │ _at":null,"grace_period_ends_at":null,"canceled_at":nu
+  │ ll,"expires_at":null,"created_at":"2026-04-05T21:01:19
+  │ .000000Z","updated_at":"2026-04-05T21:01:19.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  541µs     476µs   (cache)      92µs            18ms             617µs      34µs      20ms  
+
+
+❏ 05 — Transactions
+↳ Create transaction → transactionId saved
+  POST http://127.0.0.1:8000/api/subscription-transactions  
+  201 Created ★ 32ms time ★ 446B↑ 663B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 50B
+  │ {
+  │   "subscription_id": 3,
+  │   "provider": "manual"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 328B
+  │ {"data":{"id":7,"subscription_id":3,"reference":"TXN-S
+  │ DR27GNQEMQH","amount":"11.99","currency":"USD","status
+  │ ":"pending","provider":"manual","provider_transaction_
+  │ id":null,"paid_at":null,"failed_at":null,"failure_reas
+  │ on":null,"metadata":null,"created_at":"2026-04-05T21:0
+  │ 1:20.000000Z","updated_at":"2026-04-05T21:01:20.000000
+  │ Z"}}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       1ms    (cache)      189µs           28ms             1ms        50µs      32ms  
+
+
+↳ List transactions (admin)
+  GET http://127.0.0.1:8000/api/subscription-transactions  
+  200 OK ★ 28ms time ★ 343B↑ 3.33kB↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 3kB
+  │ {"data":[{"id":7,"subscription_id":3,"reference":"TXN-
+  │ SDR27GNQEMQH","amount":"11.99","currency":"USD","statu
+  │ s":"pending","provider":"manual","provider_transaction
+  │ _id":null,"paid_at":null,"failed_at":null,"failure_rea
+  │ son":null,"metadata":null,"created_at":"2026-04-05T21:
+  │ 01:20.000000Z","updated_at":"2026-04-05T21:01:20.00000
+  │ 0Z"},{"id":6,"subscription_id":2,"reference":"TXN-709T
+  │ 1NWBMO4I","amount":"11.99","currency":"USD","status":"
+  │ refunded","provider":"manual","provider_transaction_id
+  │ ":null,"paid_at":"2026-04-05T20:58:12.000000Z","failed
+  │ _at":null,"failure_reason":null,"metadata":null,"creat
+  │ ed_at":"2026-04-05T20:58:12.000000Z","updated_at":"202
+  │ 6-04-05T20:58:12.000000Z"},{"id":5,"subscription_id":2
+  │ ,"reference":"TXN-MNT9ZBJLD1FM","amount":"11.99","curr
+  │ ency":"USD","status":"failed","provider":"manual","pro
+  │ vider_transaction_id":null,"paid_at":null,"failed_at":
+  │ "2026-04-05T20:58:11.000000Z","failure_reason":"Insuff
+  │ icient funds","metadata":null,"created_at":"2026-04-05
+  │ T20:58:11.000000Z","updated_at":"2026-04-05T20:58:11.0
+  │ 00000Z"},{"id":4,"subscription_id":2,"reference":"TXN-
+  │ TZRIO7KYWL2R","amount":"11.99","currency":"USD","statu
+  │ s":"paid","provider":"manual","provider_transaction_id
+  │ ":null,"paid_at":"2026-04-05T20:58:10.000000Z","failed
+  │ _at":null,"failure_reason":null,"metadata":null,"creat
+  │ ed_at":"2026-04-05T20:58:08.000000Z","updated_at":"202
+  │ 6-04-05T20:58:10.000000Z"},{"id":3,"subscription_id":1
+  │ ,"reference":"TXN-GYTZDZVGWTLQ","amount":"11.99","curr
+  │ ency":"USD","status":"refunded","provider":"manual","p
+  │ rovider_transaction_id":null,"paid_at":"2026-04-05T20:
+  │ 54:01.000000Z","failed_at":null,"failure_reason":null,
+  │ "metadata":null,"created_at":"2026-04-05T20:54:00.0000
+  │ 00Z","updated_at":"2026-04-05T20:54:01.000000Z"},{"id"
+  │ :2,"subscription_id":1,"reference":"TXN-6C7B0KNFU6F9",
+  │ "amount":"11.99","currency":"USD","status":"failed","p
+  │ rovider":"manual","provider_transaction_id":null,"paid
+  │ _at":null,"failed_at":"2026-04-05T20:54:00.000000Z","f
+  │ ailure_reason":"Insufficient funds","metadata":null,"c
+  │ reated_at":"2026-04-05T20:53:59.000000Z","updated_
+  │ (showing 2.05kB/3kB)
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  999µs     735µs   (cache)      164µs           25ms             1ms        110µs     28ms  
+
+
+↳ List transactions (user — own only)
+  GET http://127.0.0.1:8000/api/subscription-transactions  
+  200 OK ★ 28ms time ★ 343B↑ 3.33kB↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 3kB
+  │ {"data":[{"id":7,"subscription_id":3,"reference":"TXN-
+  │ SDR27GNQEMQH","amount":"11.99","currency":"USD","statu
+  │ s":"pending","provider":"manual","provider_transaction
+  │ _id":null,"paid_at":null,"failed_at":null,"failure_rea
+  │ son":null,"metadata":null,"created_at":"2026-04-05T21:
+  │ 01:20.000000Z","updated_at":"2026-04-05T21:01:20.00000
+  │ 0Z"},{"id":6,"subscription_id":2,"reference":"TXN-709T
+  │ 1NWBMO4I","amount":"11.99","currency":"USD","status":"
+  │ refunded","provider":"manual","provider_transaction_id
+  │ ":null,"paid_at":"2026-04-05T20:58:12.000000Z","failed
+  │ _at":null,"failure_reason":null,"metadata":null,"creat
+  │ ed_at":"2026-04-05T20:58:12.000000Z","updated_at":"202
+  │ 6-04-05T20:58:12.000000Z"},{"id":5,"subscription_id":2
+  │ ,"reference":"TXN-MNT9ZBJLD1FM","amount":"11.99","curr
+  │ ency":"USD","status":"failed","provider":"manual","pro
+  │ vider_transaction_id":null,"paid_at":null,"failed_at":
+  │ "2026-04-05T20:58:11.000000Z","failure_reason":"Insuff
+  │ icient funds","metadata":null,"created_at":"2026-04-05
+  │ T20:58:11.000000Z","updated_at":"2026-04-05T20:58:11.0
+  │ 00000Z"},{"id":4,"subscription_id":2,"reference":"TXN-
+  │ TZRIO7KYWL2R","amount":"11.99","currency":"USD","statu
+  │ s":"paid","provider":"manual","provider_transaction_id
+  │ ":null,"paid_at":"2026-04-05T20:58:10.000000Z","failed
+  │ _at":null,"failure_reason":null,"metadata":null,"creat
+  │ ed_at":"2026-04-05T20:58:08.000000Z","updated_at":"202
+  │ 6-04-05T20:58:10.000000Z"},{"id":3,"subscription_id":1
+  │ ,"reference":"TXN-GYTZDZVGWTLQ","amount":"11.99","curr
+  │ ency":"USD","status":"refunded","provider":"manual","p
+  │ rovider_transaction_id":null,"paid_at":"2026-04-05T20:
+  │ 54:01.000000Z","failed_at":null,"failure_reason":null,
+  │ "metadata":null,"created_at":"2026-04-05T20:54:00.0000
+  │ 00Z","updated_at":"2026-04-05T20:54:01.000000Z"},{"id"
+  │ :2,"subscription_id":1,"reference":"TXN-6C7B0KNFU6F9",
+  │ "amount":"11.99","currency":"USD","status":"failed","p
+  │ rovider":"manual","provider_transaction_id":null,"paid
+  │ _at":null,"failed_at":"2026-04-05T20:54:00.000000Z","f
+  │ ailure_reason":"Insufficient funds","metadata":null,"c
+  │ reated_at":"2026-04-05T20:53:59.000000Z","updated_
+  │ (showing 2.05kB/3kB)
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  731µs     700µs   (cache)      132µs           25ms             1ms        44µs      28ms  
+
+
+↳ Get transaction by ID (admin)
+  GET http://127.0.0.1:8000/api/subscription-transactions/7  
+  200 OK ★ 20ms time ★ 345B↑ 658B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 328B
+  │ {"data":{"id":7,"subscription_id":3,"reference":"TXN-S
+  │ DR27GNQEMQH","amount":"11.99","currency":"USD","status
+  │ ":"pending","provider":"manual","provider_transaction_
+  │ id":null,"paid_at":null,"failed_at":null,"failure_reas
+  │ on":null,"metadata":null,"created_at":"2026-04-05T21:0
+  │ 1:20.000000Z","updated_at":"2026-04-05T21:01:20.000000
+  │ Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       965µs   (cache)      153µs           17ms             1ms        43µs      20ms  
+
+
+↳ Mark paid → subscription becomes active
+  POST http://127.0.0.1:8000/api/subscription-transactions/7/mark-paid  
+  200 OK ★ 28ms time ★ 375B↑ 680B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 350B
+  │ {"data":{"id":7,"subscription_id":3,"reference":"TXN-S
+  │ DR27GNQEMQH","amount":"11.99","currency":"USD","status
+  │ ":"paid","provider":"manual","provider_transaction_id"
+  │ :null,"paid_at":"2026-04-05T21:01:22.000000Z","failed_
+  │ at":null,"failure_reason":null,"metadata":null,"create
+  │ d_at":"2026-04-05T21:01:20.000000Z","updated_at":"2026
+  │ -04-05T21:01:22.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  469µs     547µs   (cache)      74µs            26ms             617µs      24µs      27ms  
+
+
+↳ Get subscription — verify active
+  GET http://127.0.0.1:8000/api/subscriptions/3  
+  200 OK ★ 21ms time ★ 333B↑ 757B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 427B
+  │ {"data":{"id":3,"user_id":2,"plan_id":2,"plan_price_id
+  │ ":5,"status":"active","started_at":"2026-04-05T21:01:1
+  │ 9.000000Z","trial_starts_at":null,"trial_ends_at":null
+  │ ,"current_period_starts_at":"2026-04-05T21:01:22.00000
+  │ 0Z","current_period_ends_at":"2026-05-05T21:01:22.0000
+  │ 00Z","grace_period_ends_at":null,"canceled_at":null,"e
+  │ xpires_at":null,"created_at":"2026-04-05T21:01:19.0000
+  │ 00Z","updated_at":"2026-04-05T21:01:22.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  680µs     714µs   (cache)      180µs           18ms             1ms        53µs      20ms  
+
+
+↳ Mark past due — starts grace period (admin)
+  POST http://127.0.0.1:8000/api/subscriptions/3/mark-past-due  
+  200 OK ★ 28ms time ★ 452B↑ 784B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 52B
+  │ {
+  │   "grace_period_ends_at": "2026-04-10T00:00:00Z"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 454B
+  │ {"data":{"id":3,"user_id":2,"plan_id":2,"plan_price_id
+  │ ":5,"status":"past_due","started_at":"2026-04-05T21:01
+  │ :19.000000Z","trial_starts_at":null,"trial_ends_at":nu
+  │ ll,"current_period_starts_at":"2026-04-05T21:01:22.000
+  │ 000Z","current_period_ends_at":"2026-05-05T21:01:22.00
+  │ 0000Z","grace_period_ends_at":"2026-04-08T21:01:22.000
+  │ 000Z","canceled_at":null,"expires_at":null,"created_at
+  │ ":"2026-04-05T21:01:19.000000Z","updated_at":"2026-04-
+  │ 05T21:01:22.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  500µs     495µs   (cache)      97µs            25ms             790µs      32µs      27ms  
+
+
+↳ Get subscription — verify past_due
+  GET http://127.0.0.1:8000/api/subscriptions/3  
+  200 OK ★ 25ms time ★ 333B↑ 784B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 454B
+  │ {"data":{"id":3,"user_id":2,"plan_id":2,"plan_price_id
+  │ ":5,"status":"past_due","started_at":"2026-04-05T21:01
+  │ :19.000000Z","trial_starts_at":null,"trial_ends_at":nu
+  │ ll,"current_period_starts_at":"2026-04-05T21:01:22.000
+  │ 000Z","current_period_ends_at":"2026-05-05T21:01:22.00
+  │ 0000Z","grace_period_ends_at":"2026-04-08T21:01:22.000
+  │ 000Z","canceled_at":null,"expires_at":null,"created_at
+  │ ":"2026-04-05T21:01:19.000000Z","updated_at":"2026-04-
+  │ 05T21:01:22.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  452µs     476µs   (cache)      91µs            23ms             700µs      45µs      24ms  
+
+
+↳ Create 2nd transaction for grace period
+  POST http://127.0.0.1:8000/api/subscription-transactions  
+  201 Created ★ 28ms time ★ 446B↑ 663B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 50B
+  │ {
+  │   "subscription_id": 3,
+  │   "provider": "manual"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 328B
+  │ {"data":{"id":8,"subscription_id":3,"reference":"TXN-Z
+  │ 5892WE2W6M1","amount":"11.99","currency":"USD","status
+  │ ":"pending","provider":"manual","provider_transaction_
+  │ id":null,"paid_at":null,"failed_at":null,"failure_reas
+  │ on":null,"metadata":null,"created_at":"2026-04-05T21:0
+  │ 1:23.000000Z","updated_at":"2026-04-05T21:01:23.000000
+  │ Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  427µs     454µs   (cache)      247µs           26ms             712µs      29µs      27ms  
+
+
+↳ Mark failed (records failure reason)
+  POST http://127.0.0.1:8000/api/subscription-transactions/8/mark-failed  
+  200 OK ★ 25ms time ★ 454B↑ 698B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 44B
+  │ {
+  │   "failure_reason": "Insufficient funds"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 368B
+  │ {"data":{"id":8,"subscription_id":3,"reference":"TXN-Z
+  │ 5892WE2W6M1","amount":"11.99","currency":"USD","status
+  │ ":"failed","provider":"manual","provider_transaction_i
+  │ d":null,"paid_at":null,"failed_at":"2026-04-05T21:01:2
+  │ 3.000000Z","failure_reason":"Insufficient funds","meta
+  │ data":null,"created_at":"2026-04-05T21:01:23.000000Z",
+  │ "updated_at":"2026-04-05T21:01:23.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  359µs     360µs   (cache)      85µs            23ms             576µs      25µs      24ms  
+
+
+↳ Create 3rd transaction and mark paid (reactivate)
+  POST http://127.0.0.1:8000/api/subscription-transactions  
+  201 Created ★ 30ms time ★ 446B↑ 663B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 50B
+  │ {
+  │   "subscription_id": 3,
+  │   "provider": "manual"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 328B
+  │ {"data":{"id":9,"subscription_id":3,"reference":"TXN-W
+  │ A1QQSXV6HQG","amount":"11.99","currency":"USD","status
+  │ ":"pending","provider":"manual","provider_transaction_
+  │ id":null,"paid_at":null,"failed_at":null,"failure_reas
+  │ on":null,"metadata":null,"created_at":"2026-04-05T21:0
+  │ 1:24.000000Z","updated_at":"2026-04-05T21:01:24.000000
+  │ Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  642µs     765µs   (cache)      361µs           27ms             1ms        46µs      29ms  
+
+
+↳ Mark paid (reactivate subscription)
+  POST http://127.0.0.1:8000/api/subscription-transactions/9/mark-paid  
+  200 OK ★ 21ms time ★ 375B↑ 680B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 350B
+  │ {"data":{"id":9,"subscription_id":3,"reference":"TXN-W
+  │ A1QQSXV6HQG","amount":"11.99","currency":"USD","status
+  │ ":"paid","provider":"manual","provider_transaction_id"
+  │ :null,"paid_at":"2026-04-05T21:01:24.000000Z","failed_
+  │ at":null,"failure_reason":null,"metadata":null,"create
+  │ d_at":"2026-04-05T21:01:24.000000Z","updated_at":"2026
+  │ -04-05T21:01:24.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  608µs     722µs   (cache)      139µs           18ms             1ms        44µs      21ms  
+
+
+↳ Refund → adds amount to user balance
+  POST http://127.0.0.1:8000/api/subscription-transactions/9/refund  
+  200 OK ★ 35ms time ★ 372B↑ 684B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 354B
+  │ {"data":{"id":9,"subscription_id":3,"reference":"TXN-W
+  │ A1QQSXV6HQG","amount":"11.99","currency":"USD","status
+  │ ":"refunded","provider":"manual","provider_transaction
+  │ _id":null,"paid_at":"2026-04-05T21:01:24.000000Z","fai
+  │ led_at":null,"failure_reason":null,"metadata":null,"cr
+  │ eated_at":"2026-04-05T21:01:24.000000Z","updated_at":"
+  │ 2026-04-05T21:01:25.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  830µs     837µs   (cache)      173µs           32ms             1ms        42µs      35ms  
+
+
+❏ 06 — Lifecycle (cancel / expire / renew)
+↳ Cancel subscription (user — owner)
+  POST http://127.0.0.1:8000/api/subscriptions/3/cancel  
+  200 OK ★ 29ms time ★ 360B↑ 784B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 454B
+  │ {"data":{"id":3,"user_id":2,"plan_id":2,"plan_price_id
+  │ ":5,"status":"canceled","started_at":"2026-04-05T21:01
+  │ :19.000000Z","trial_starts_at":null,"trial_ends_at":nu
+  │ ll,"current_period_starts_at":"2026-04-05T21:01:24.000
+  │ 000Z","current_period_ends_at":"2026-05-05T21:01:24.00
+  │ 0000Z","grace_period_ends_at":null,"canceled_at":"2026
+  │ -04-05T21:01:25.000000Z","expires_at":null,"created_at
+  │ ":"2026-04-05T21:01:19.000000Z","updated_at":"2026-04-
+  │ 05T21:01:25.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  302µs     487µs   (cache)      74µs            27ms             1ms        42µs      29ms  
+
+
+↳ Expire subscription (admin)
+  POST http://127.0.0.1:8000/api/subscriptions/3/expire  
+  200 OK ★ 26ms time ★ 360B↑ 808B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 478B
+  │ {"data":{"id":3,"user_id":2,"plan_id":2,"plan_price_id
+  │ ":5,"status":"expired","started_at":"2026-04-05T21:01:
+  │ 19.000000Z","trial_starts_at":null,"trial_ends_at":nul
+  │ l,"current_period_starts_at":"2026-04-05T21:01:24.0000
+  │ 00Z","current_period_ends_at":"2026-05-05T21:01:24.000
+  │ 000Z","grace_period_ends_at":null,"canceled_at":"2026-
+  │ 04-05T21:01:25.000000Z","expires_at":"2026-04-05T21:01
+  │ :25.000000Z","created_at":"2026-04-05T21:01:19.000000Z
+  │ ","updated_at":"2026-04-05T21:01:25.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  744µs     715µs   (cache)      141µs           23ms             1ms        45µs      26ms  
+
+
+↳ Extend period PUT (admin)
+  PUT http://127.0.0.1:8000/api/subscriptions/3  
+  200 OK ★ 27ms time ★ 438B↑ 808B↓ size ★ 10↑ 10↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 53B
+  │ {
+  │   "current_period_ends_at": "2027-01-01 00:00:00"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 478B
+  │ {"data":{"id":3,"user_id":2,"plan_id":2,"plan_price_id
+  │ ":5,"status":"expired","started_at":"2026-04-05T21:01:
+  │ 19.000000Z","trial_starts_at":null,"trial_ends_at":nul
+  │ l,"current_period_starts_at":"2026-04-05T21:01:24.0000
+  │ 00Z","current_period_ends_at":"2027-01-01T00:00:00.000
+  │ 000Z","grace_period_ends_at":null,"canceled_at":"2026-
+  │ 04-05T21:01:25.000000Z","expires_at":"2026-04-05T21:01
+  │ :25.000000Z","created_at":"2026-04-05T21:01:19.000000Z
+  │ ","updated_at":"2026-04-05T21:01:26.000000Z"}}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  338µs     365µs   (cache)      76µs            25ms             593µs      23µs      26ms  
+
+
+↳ Renew subscription (admin)
+  POST http://127.0.0.1:8000/api/subscriptions/3/renew  
+  422 Unprocessable Content ★ 22ms time ★ 359B↑ 404B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 55B
+  │ {"message":"Only active subscriptions can be renewed."
+  │ }
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  1ms       954µs   (cache)      270µs           19ms             605µs      25µs      22ms  
+
+
+❏ 07 — Cleanup (delete prices then plan, logout last)
+↳ Delete USD price (admin)
+  DELETE http://127.0.0.1:8000/api/plan-prices/5  
+  409 Conflict ★ 22ms time ★ 334B↑ 403B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 67B
+  │ {"message":"Cannot delete price. It has associated sub
+  │ scriptions."}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  621µs     686µs   (cache)      146µs           19ms             983µs      43µs      21ms  
+
+
+↳ Delete AED price (admin)
+  DELETE http://127.0.0.1:8000/api/plan-prices/9  
+  204 No Content ★ 20ms time ★ 334B↑ 306B↓ size ★ 8↑ 9↓ headers ★ 0 cookies
+  ↓ text/plain ★ text ★ plain ★ utf8
+
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  559µs     681µs   (cache)      135µs           15ms             3ms        159µs     20ms  
+
+
+↳ Delete plan (admin)
+  DELETE http://127.0.0.1:8000/api/plans/2  
+  409 Conflict ★ 23ms time ★ 328B↑ 395B↓ size ★ 8↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 59B
+  │ {"message":"Cannot delete plan. It has associated pric
+  │ es."}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  579µs     664µs   (cache)      138µs           20ms             1ms        43µs      22ms  
+
+
+↳ Logout (user)
+  POST http://127.0.0.1:8000/api/auth/logout  
+  200 OK ★ 27ms time ★ 349B↑ 368B↓ size ★ 9↑ 10↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 38B
+  │ {"message":"Logged out successfully."}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  739µs     724µs   (cache)      145µs           24ms             1ms        47µs      27ms  
+
+
+┌─────────────────────────┬────────────────────┬────────────────────┐
+│                         │           executed │             failed │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│              iterations │                  1 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│                requests │                 42 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│            test-scripts │                 10 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│      prerequest-scripts │                 42 │                  0 │
+├─────────────────────────┼────────────────────┼────────────────────┤
+│              assertions │                  0 │                  0 │
+├─────────────────────────┴────────────────────┴────────────────────┤
+│ total run duration: 14.4s                                         │
+├───────────────────────────────────────────────────────────────────┤
+│ total data received: 22.37kB (approx)                             │
+├───────────────────────────────────────────────────────────────────┤
+│ average response time: 36ms [min: 20ms, max: 258ms, s.d.: 48ms]   │
+├───────────────────────────────────────────────────────────────────┤
+│ average first byte time: 33ms [min: 15ms, max: 253ms, s.d.: 46ms] │
+└───────────────────────────────────────────────────────────────────┘

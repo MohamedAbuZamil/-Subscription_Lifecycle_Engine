@@ -36,6 +36,7 @@ All docs are located in the `docs/` folder:
 | `docs/schema.md` | Quick field-level reference for every table with type, nullable, and description |
 | `docs/cron-jobs.md` | Documentation for the three scheduled commands, their nightly order, and production cron setup |
 | `docs/testing.md` | Testing guide — Newman CLI (automated) and VS Code REST Client (manual) |
+| `docs/newman-test-results.md` | Detailed explanation of the Newman test run executed on the OVH server — all 42 requests, expected statuses, and lifecycle flow |
 
 **Test files:**
 
